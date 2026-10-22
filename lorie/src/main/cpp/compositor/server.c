@@ -333,6 +333,9 @@ int twl_server_init(struct twl_server *server, const struct twl_config *config, 
 	server->display = wl_display_create();
 	if (!server->display)
 		return -1;
+	/* The default 4 KiB per client fills up while a busy client (Xwayland, glamor rendering)
+	 * lags behind 120 Hz frame and touch events, and the client is then disconnected. */
+	wl_display_set_default_max_buffer_size(server->display, 1 << 20);
 	server->loop = wl_display_get_event_loop(server->display);
 
 	server->renderer = twl_renderer_create(server, egl_display);

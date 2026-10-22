@@ -1,6 +1,6 @@
 #!/data/data/@EMBEDDED_APPLICATION_ID@/files/usr/bin/bash
-# termux-x11's command line on Termux:Wayland: starts the compositor with a fullscreen
-# Xwayland on the display, so scripts written for Termux:X11 keep working:
+# termux-x11's command line on Termux:Wayland: starts the compositor with a rootful Xwayland
+# on the display, so scripts written for Termux:X11 keep working:
 #   termux-wayland-x11 :1 -xstartup "xfce4-session"
 #   termux-wayland-x11 :1 -- xfce4-session
 #   termux-wayland-x11 :1 &   (then DISPLAY=:1 ...)
@@ -15,11 +15,11 @@ if [ "$1" = "--inner" ]; then
   while [ $# -gt 0 ] && [ "$1" != "--" ]; do xwayland_args+=("$1"); shift; done
   [ "$1" = "--" ] && shift
 
-  # -hidpi (Xwayland 24.1+): the X screen gets the output's real resolution instead of its
-  # scaled-down logical size, like Termux:X11's.
-  hidpi=
-  Xwayland -help 2>&1 | grep -q -- -hidpi && hidpi=-hidpi
-  Xwayland "$display" -fullscreen $hidpi "${xwayland_args[@]}" &
+  # Rootful but not -fullscreen: Termux:Wayland maximizes the window and Xwayland resizes the
+  # X screen to it, so the X desktop is Termux:Wayland's screen size divided by its output
+  # scale, and follows rotation. (-fullscreen keeps Xwayland's own size and stretches it.)
+  # -hidpi (Xwayland 24.1+) makes it the full resolution instead.
+  Xwayland "$display" "${xwayland_args[@]}" &
   xwayland=$!
   for _ in $(seq 1 100); do
     [ -S "${TMPDIR:-/tmp}/.X11-unix/X${display#:}" ] && break

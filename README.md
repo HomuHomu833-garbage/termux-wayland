@@ -95,7 +95,7 @@ If you're done using Termux:Wayland just simply exit it through its notification
 But you should pay attention that `termux-wayland` command is still running and can not be killed this way.
 
 ### Running X11 applications
-X11 programs run in Xwayland. With this repository's `termux-x11-nightly` package installed, `termux-x11` takes its usual arguments and starts Termux:Wayland with a fullscreen Xwayland on the display:
+X11 programs run in Xwayland. With this repository's `termux-x11-nightly` package installed, `termux-x11` takes its usual arguments and starts Termux:Wayland with Xwayland filling the screen on the display:
 ```
 termux-x11 :1 -xstartup "dbus-launch --exit-with-session xfce4-session"
 ```
@@ -108,7 +108,9 @@ or
 termux-x11 :1 &
 env DISPLAY=:1 dbus-launch --exit-with-session xfce4-session
 ```
-`TERMUX_X11_XSTARTUP` works too. X server options (`-ac`, `-dpi`, `-listen tcp`...) go to Xwayland; Termux:X11's `-legacy-drawing`, `-force-bgra`, `-disable-dri3` and `-force-sysvshm` are accepted and ignored.
+The X screen is Termux:Wayland's screen: the resolution set in the output preferences divided by the Wayland output scale (1680x1050 at scale 2 is an 840x525 X desktop), and it follows rotation. Use scale 1 for the full resolution, or pass `-hidpi` to get the full resolution at any scale.
+
+`TERMUX_X11_XSTARTUP` works too. X server options (`-ac`, `-dpi`, `-hidpi`, `-listen tcp`...) go to Xwayland; Termux:X11's `-legacy-drawing`, `-force-bgra`, `-disable-dri3` and `-force-sysvshm` are accepted and ignored.
 
 Without that package, the same command is `termux-wayland-x11` (in `termux-wayland-nightly`), so Termux:X11 can stay installed next to Termux:Wayland.
 

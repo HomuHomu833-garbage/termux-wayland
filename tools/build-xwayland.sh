@@ -3,10 +3,11 @@
 # Termux's xwayland package has no glamor (-Dglamor=false), so it offers no DRI3 and X11 programs
 # get no GPU (GLX: "failed to create drisw screen", desktops show the GPU as Unknown).
 #   bash build-xwayland.sh            installs to $PREFIX/opt/xwayland-glamor
-#   GBM_PREFIX=<mesa prefix>          where gbm.pc/dri.pc come from (default: termux-xclipse940-linux's
-#                                     RadeonSI, $PREFIX/opt/radeonsi-xclipse, else Termux's own)
+#   GBM_PREFIX=<mesa prefix>          a Mesa built for Termux with GBM, where gbm.pc/dri.pc come
+#                                     from (default: $PREFIX, Termux's own)
 # Same version, Android patches and options as termux-packages' x11-packages/xwayland, plus glamor.
-# termux-wayland-x11 runs it (through termux-gpu, when installed) instead of Termux's Xwayland.
+# termux-wayland-x11 runs it instead of Termux's Xwayland. A Mesa outside the default paths has to
+# be found at run time too: TERMUX_WAYLAND_XWAYLAND="<wrapper> $PREFIX/opt/xwayland-glamor/bin/Xwayland".
 set -euo pipefail
 VER=${VER:-24.1.14}
 SHA=4eb6b98d678299a4b96138d886345b294130695760345ef84596225a8224078a
@@ -37,7 +38,7 @@ grep -q xwl_memfd_create "$S/hw/xwayland/xwayland-shm.c" ||
 	sed -i 's/^static inline int memfd_create(/#define memfd_create xwl_memfd_create\n&/' "$S/hw/xwayland/xwayland-shm.c"
 
 # gbm.pc and dri.pc from GBM_PREFIX, the rest from Termux.
-GBM_PREFIX=${GBM_PREFIX:-$PREFIX/opt/radeonsi-xclipse}
+GBM_PREFIX=${GBM_PREFIX:-$PREFIX}
 export PKG_CONFIG_PATH=$GBM_PREFIX/lib/pkgconfig:$PREFIX/lib/pkgconfig
 pkg-config --exists gbm || { echo "No gbm.pc: build a Mesa with GBM, or set GBM_PREFIX"; exit 1; }
 FLAGS="-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -fcommon -fPIC -DFNDELAY=O_NDELAY -Wno-int-to-pointer-cast -Wno-implicit-function-declaration -I$PREFIX/include/libdrm"

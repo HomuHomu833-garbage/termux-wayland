@@ -22,12 +22,15 @@ if [ "$1" = "--inner" ]; then
   # -hidpi (Xwayland 24.1+) makes it the full resolution instead.
   # An Xwayland with glamor (tools/build-xwayland.sh), when installed: X11 programs then get DRI3
   # and the GPU. Termux's xwayland package has no glamor, so its X11 programs only have software
-  # rendering. Run through termux-gpu when there is one (its Mesa is not on the default paths).
-  xwayland_cmd=(Xwayland)
+  # rendering. TERMUX_WAYLAND_XWAYLAND overrides the command (e.g. a wrapper that sets up the
+  # environment for a Mesa outside the default paths).
   glamor=${PREFIX:-/data/data/com.termux/files/usr}/opt/xwayland-glamor/bin/Xwayland
-  if [ -z "$TERMUX_WAYLAND_NO_GLAMOR" ] && [ -x "$glamor" ]; then
+  if [ -n "$TERMUX_WAYLAND_XWAYLAND" ]; then
+    read -ra xwayland_cmd <<<"$TERMUX_WAYLAND_XWAYLAND"
+  elif [ -z "$TERMUX_WAYLAND_NO_GLAMOR" ] && [ -x "$glamor" ]; then
     xwayland_cmd=("$glamor")
-    command -v termux-gpu >/dev/null && xwayland_cmd=(termux-gpu "$glamor")
+  else
+    xwayland_cmd=(Xwayland)
   fi
   "${xwayland_cmd[@]}" "$display" "${xwayland_args[@]}" &
   xwayland=$!

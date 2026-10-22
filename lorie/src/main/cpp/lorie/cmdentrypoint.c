@@ -702,6 +702,7 @@ static void *compositor_thread(void *arg) {
 		.send_to_frontend = send_to_frontend,
 		.paced = true,
 		.flip_y = true,
+		.swap_rb = true,
 		.set_cursor = set_cursor,
 		.move_cursor = move_cursor,
 		.clipboard_text = clipboard_text,

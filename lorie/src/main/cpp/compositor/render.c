@@ -81,6 +81,7 @@ static const char *fragment_external_src =
 	"uniform float opaque;\n"
 	"void main() {\n"
 	"	vec4 c = texture2D(tex, v);\n"
+	"	c = mix(c, c.bgra, swizzle);\n"
 	"	c.a = max(c.a, opaque);\n"
 	"	gl_FragColor = c;\n"
 	"}\n";
@@ -462,6 +463,8 @@ static void draw_surface(struct twl_surface *s, int32_t x, int32_t y, void *data
 	else
 		glUniform4f(p->rect, px / W * 2 - 1, 1 - py / H * 2, pw / W * 2, -ph / H * 2);
 	glUniform4f(p->src, u0, v0, du, dv);
+	if (server->backend.swap_rb)
+		swizzle = !swizzle;
 	glUniform1f(p->swizzle, swizzle ? 1.0f : 0.0f);
 	glUniform1f(p->opaque, opaque ? 1.0f : 0.0f);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

@@ -389,6 +389,9 @@ struct twl_backend {
 	bool paced;
 	/* The frame is read with row 0 at the top (an AHardwareBuffer), not GL's bottom-up. */
 	bool flip_y;
+	/* The frame is shown with red and blue swapped (Termux:X11's renderer samples an R8G8B8X8
+	 * root window as B,G,R, the X server's byte order): write it that way. */
+	bool swap_rb;
 	/* A client copied text (clipboard sync to Android). May be NULL. */
 	void (*clipboard_text)(void *data, const char *utf8);
 	/* The frontend draws the cursor (both NULL: the compositor draws it). Pixels are R,G,B,A

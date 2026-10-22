@@ -109,11 +109,22 @@ void twl_server_vsync(struct twl_server *server) {
 
 /* ---- output ---- */
 
-static int32_t output_scale(struct twl_server *server) {
+/* Auto: about 200 dpi per scale step, but never so much that the shorter side of the output
+ * drops below 480 logical pixels (a 1680x1050 resolution on a phone is ~700 dpi, and scale 4
+ * would leave apps 262 pixels of height). */
+static int32_t output_scale_for(struct twl_server *server, int32_t width, int32_t height) {
 	if (server->config.scale > 0)
 		return server->config.scale;
-	int32_t s = server->dpi / 160;
-	return s < 1 ? 1 : s > 4 ? 4 : s;
+	int32_t s = server->dpi / 200, shorter = TWL_MIN(width, height);
+	if (s > 4)
+		s = 4;
+	while (s > 1 && shorter / s < 480)
+		s--;
+	return s < 1 ? 1 : s;
+}
+
+static int32_t output_scale(struct twl_server *server) {
+	return output_scale_for(server, server->width_px, server->height_px);
 }
 
 void twl_server_set_output(struct twl_server *server, bool have_output, int32_t width_px, int32_t height_px,
@@ -132,7 +143,8 @@ void twl_server_set_output(struct twl_server *server, bool have_output, int32_t 
 		server->dpi = dpi;
 	if (refresh_mhz > 0)
 		server->refresh_mhz = refresh_mhz;
-	int32_t scale = output_scale(server);
+	int32_t scale = output_scale_for(server, width_px > 0 ? width_px : server->width_px,
+			height_px > 0 ? height_px : server->height_px);
 	if (width_px > 0 && height_px > 0 &&
 			(width_px != server->width_px || height_px != server->height_px || scale != server->scale)) {
 		server->width_px = width_px;

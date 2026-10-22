@@ -37,6 +37,51 @@ fi
 grep -q xwl_memfd_create "$S/hw/xwayland/xwayland-shm.c" ||
 	sed -i 's/^static inline int memfd_create(/#define memfd_create xwl_memfd_create\n&/' "$S/hw/xwayland/xwayland-shm.c"
 
+# Present paces copied frames (always, for a rootful Xwayland) with a fixed 17 ms timer, capping
+# vsynced X11 programs and compositing window managers at ~60 fps: follow the output's refresh.
+P=$S/hw/xwayland/xwayland-present.c
+grep -q xwl_present_copy_timer_len "$P" || {
+	sed -i 's/^#include "xwayland-present.h"$/#include "xwayland-output.h"\n&/' "$P"
+	sed -i 's/^            timeout = TIMER_LEN_COPY;$/            timeout = xwl_present_copy_timer_len(xwl_window);/' "$P"
+	sed -i '/^void$/{N;/\nxwl_present_reset_timer(/i\
+static CARD32\
+xwl_present_copy_timer_len(struct xwl_window *xwl_window)\
+{\
+    struct xwl_output *xwl_output;\
+    int32_t refresh = 0;\
+\
+    if (xwl_window)\
+        xorg_list_for_each_entry(xwl_output, &xwl_window->xwl_screen->output_list, link)\
+            refresh = max(refresh, xwl_output->refresh);\
+    return refresh > 0 ? max(1000000 / refresh, 1) : TIMER_LEN_COPY;\
+}\
+
+}' "$P"
+	grep -q "timeout = xwl_present_copy_timer_len" "$P" || { echo "present timer patch failed"; exit 1; }
+}
+# Same for the modes of the rootful screen, which RandR reports at a fixed 60 Hz.
+O=$S/hw/xwayland/xwayland-output.c
+grep -q xwl_fixed_refresh "$O" || {
+	sed -i 's/^                            60, 0, 0);$/                            xwl_fixed_refresh(xwl_output), 0, 0);/' "$O"
+	sed -i 's/xwayland_cvt(current_width, current_height, 60, 0, 0)/xwayland_cvt(current_width, current_height, xwl_fixed_refresh(xwl_output), 0, 0)/' "$O"
+	sed -i '/^Bool$/{N;/\nxwl_randr_add_modes_fixed(/i\
+static double\
+xwl_fixed_refresh(struct xwl_output *fixed)\
+{\
+    struct xwl_output *xwl_output;\
+    int32_t refresh = 0;\
+\
+    if (!fixed->xwl_screen)\
+        return 60;\
+    xorg_list_for_each_entry(xwl_output, &fixed->xwl_screen->output_list, link)\
+        refresh = max(refresh, xwl_output->refresh);\
+    return refresh > 0 ? refresh / 1000.0 : 60;\
+}\
+
+}' "$O"
+	[ "$(grep -c "xwl_fixed_refresh(xwl_output)" "$O")" = 2 ] || { echo "mode refresh patch failed"; exit 1; }
+}
+
 # gbm.pc and dri.pc from GBM_PREFIX, the rest from Termux.
 GBM_PREFIX=${GBM_PREFIX:-$PREFIX}
 export PKG_CONFIG_PATH=$GBM_PREFIX/lib/pkgconfig:$PREFIX/lib/pkgconfig

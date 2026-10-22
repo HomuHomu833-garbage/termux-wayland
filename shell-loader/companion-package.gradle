@@ -23,8 +23,8 @@ def pkgName = 'termux-wayland-nightly'
 def pkgVersion = (file("$rootDir/lorie/version.gradle").text =~ /version = "([^"]+)"/)[0][1] + '-0'
 def pkgDescription = 'Companion package for termux-wayland app'
 def pkgHomepage = 'https://github.com/HomuHomu833/termux-wayland'
-def pkgMaintainer = 'Twaik Yont @twaik'
-def pkgDepends = 'xkeyboard-config'
+def pkgMaintainer = 'Homura @HomuHomu833'
+def pkgDepends = 'bash'
 
 def outputDir = layout.buildDirectory.dir('outputs/companion').get().asFile
 def debFile = new File(outputDir, "$pkgName-$pkgVersion-all.deb")
@@ -54,7 +54,7 @@ tasks.register('buildCompanionPackage') {
         int time = (System.currentTimeMillis() / 1000L) as int
         def prefix = "data/data/$embeddedApplicationId/files/usr".toString()
 
-        def scripts = ['termux-wayland', 'termux-wayland-preference'].collectEntries {
+        def scripts = ['termux-wayland', 'termux-wayland-preference', 'termux-wayland-x11'].collectEntries {
             ["$prefix/bin/$it".toString(), file("${scriptsDir.get()}/$it").bytes]
         }
         def content = scripts + [("$prefix/libexec/termux-wayland/loader.apk".toString()): loaderApk.get().asFile.bytes]

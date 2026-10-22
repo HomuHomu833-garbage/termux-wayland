@@ -1,74 +1,114 @@
+
 # Termux:Wayland
 
 [![Nightly build](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml/badge.svg?branch=master)](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml)
 
-A Wayland compositor for Termux: a fork of [Termux:X11](https://github.com/termux/termux-x11) with the X
-server replaced by a native Wayland compositor. The app is Termux:X11's: the same activity, renderer,
-preferences, extra keys bar, touch/trackpad modes, stylus and hardware keyboard handling. X11 programs
-run through Xwayland like on any Wayland desktop.
+A [Termux](https://termux.com) Wayland compositor add-on app, forked from [Termux:X11](https://github.com/termux/termux-x11).
 
-> **Status: work in progress.** The compositor is tested on Linux against real clients (GTK3, foot,
-> weston-simple-shm, weston-simple-egl on llvmpipe, rootful Xwayland); the APK builds. It has not been
-> run on a phone yet.
+## About
+Termux:Wayland is a Wayland compositor. It is built with Android NDK and optimized to be used with Termux.
+It is Termux:X11 with the X server replaced by a Wayland compositor: the app, its preferences, extra keys
+bar and touch modes are the same. X11 programs run through Xwayland.
 
-## How it works
+This is a work in progress: it has been tested with real clients on Linux, not yet on a phone.
 
-Like Termux:X11, the server runs inside Termux's own process (`termux-wayland`, started through
-`app_process`), and the app only shows its picture and sends input back:
+## Submodules caveat
+This repo uses submodules. Use 
 
-- **Server** (`lorie/src/main/cpp/compositor`, `lorie/cmdentrypoint.c`): libwayland-server and a
-  compositor that draws every window with GLES into an `AHardwareBuffer` "root window", one frame per
-  display vsync (`AChoreographer`). Two root buffers alternate, so the app never shows a half-drawn frame.
-- **App**: Termux:X11's activity draws the root buffer and the cursor, and sends touch, mouse, stylus,
-  keys, text and clipboard over the same socket protocol as before.
-
-Client buffers:
-
-| Client renders with | Buffers | How they reach the screen |
-|---|---|---|
-| llvmpipe, lavapipe, any CPU renderer | `wl_shm` | copied into `AHardwareBuffer`s sampled by GLES (`glTexSubImage2D` fallback) |
-| a GPU driver with a DRM render node (RadeonSI, RADV, Freedreno/Turnip...) | `linux-dmabuf` v4, linear | imported with `EGL_EXT_image_dma_buf_import` if Android's EGL can, otherwise mmapped and copied |
-
-dma-bufs are polled for their write fences (implicit sync) before they are shown: Android's GLES
-ignores implicit fences, which is what made Mesa clients flicker on Termux:X11.
-
-## Protocols
-
-`wl_compositor` 6, `wl_subcompositor`, `wl_shm`, `wl_output` 4, `wl_seat` 8 (pointer, keyboard, touch),
-`wl_data_device_manager` 3 (clipboard, synced with Android's), `xdg_wm_base` 6, `zxdg_decoration_manager_v1`
-(client-side), `zxdg_output_manager_v1` 3, `wp_viewporter`, `zwp_linux_dmabuf_v1` 4,
-`zwp_text_input_v3` (shows the soft keyboard when a text field is focused), `zwp_relative_pointer_v1`,
-`zwp_pointer_constraints_v1` (pointer locks capture the mouse, for games).
-
-Windows: top-level windows fill the screen (maximized, or fullscreen when they ask), dialogs and
-fixed-size windows float centered over their parent, the focused window is on top. Alt+Tab and
-Alt+Shift+Tab cycle windows, Alt+F4 closes one. For a desktop with movable windows, run a Wayland
-compositor such as labwc or sway inside it as a client.
-
-Not yet: rootless Xwayland (it needs `xwayland_shell_v1` and an X window manager; rootful Xwayland
-works), drag and drop, primary selection, fractional scaling, buffer transforms.
-
-## Setup
-
-Requires Android 8 or later.
-
-1. Install the APK (`termux-wayland-universal-debug.apk`, or the sharedUid variant to keep Termux from
-   being throttled while the app is on screen) and the companion package (`termux-wayland-*-all.deb`,
-   `dpkg -i` it in Termux) from the latest [build](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml).
-2. In Termux: `termux-wayland -- <command>`, or `termux-wayland &` and start clients yourself:
-
-```sh
-termux-wayland &
-am start -n com.termux.wayland/.MainActivity
-export XDG_RUNTIME_DIR=$TMPDIR WAYLAND_DISPLAY=wayland-0
+```
+git clone --recurse-submodules https://github.com/HomuHomu833/termux-wayland 
+```
+or
+```
+git clone https://github.com/HomuHomu833/termux-wayland
+cd termux-wayland
+git submodule update --init --recursive
 ```
 
-In a proot or chroot distribution, bind Termux's `$TMPDIR` to the container's `/tmp`
-(`proot-distro login --shared-tmp`) and use `XDG_RUNTIME_DIR=/tmp WAYLAND_DISPLAY=wayland-0`.
-X11 programs: `Xwayland :1 -geometry 1920x1080 & DISPLAY=:1 xfce4-session`.
+## How does it work?
+Just like any other Wayland compositor.
+
+`termux-wayland` runs the compositor in a Termux process, like `termux-x11` runs the X server. It draws all
+windows with OpenGL ES into an AHardwareBuffer once per display refresh, and the app shows that buffer and
+sends input back. Clients can draw with the CPU (llvmpipe, lavapipe: `wl_shm`) or, where `/dev/dri/renderD128`
+is accessible, with a Mesa GPU driver (`linux-dmabuf`).
+
+Supported protocols: `wl_compositor`, `wl_subcompositor`, `wl_shm`, `wl_output`, `wl_seat`, `wl_data_device_manager`,
+`xdg_wm_base`, `zxdg_decoration_manager_v1`, `zxdg_output_manager_v1`, `wp_viewporter`, `zwp_linux_dmabuf_v1`,
+`zwp_text_input_v3`, `zwp_relative_pointer_v1`, `zwp_pointer_constraints_v1`.
+
+Windows fill the screen, dialogs float centered over their window, the focused window is on top.
+Use Alt+Tab to switch windows, Alt+F4 to close one. For a desktop with movable windows, run a desktop
+compositor (labwc, sway, weston...) as a Wayland client, or an X11 desktop through Xwayland.
+
+## Setup Instructions
+Termux:Wayland requires Android 8 or later. It consists of an Android app and a companion termux package, and you must install both.
+
+The Android app and the companion package are available from the artifacts of the [last successful build](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml) of this repository. Download and install `termux-wayland-universal-debug.apk`, then install the companion package with `dpkg -i termux-wayland-nightly-*-all.deb`.
+
+For X11 programs you also need Xwayland: `pkg i x11-repo && pkg i xwayland`.
+
+### Avoiding slowdowns
+<details>
+<summary>Android gives less CPU time to apps that aren't on screen — install the sharedUid APK to avoid this</summary>
+
+Android gives less CPU time to apps that aren't on screen. Once Termux:Wayland opens, Android treats Termux itself as no longer being on screen, so things running inside Termux (like your desktop apps) can slow down.
+
+To avoid this, install `termux-wayland-universal-sharedUid-debug.apk` instead of the regular one (same CI artifacts). This variant runs as part of Termux itself, so Android keeps treating it as one app and doesn't slow it down.
+
+This variant only works with the Termux app installed **from GitHub**, not F-Droid or Google Play — those are signed with different keys, and a shared UID requires matching signatures.
+</details>
+
+## Running Graphical Applications
+You can start your desired graphical application by doing:
+```
+termux-wayland -xstartup "foot"
+```
+or
+```
+termux-wayland -- foot
+```
+or
+```
+termux-wayland &
+env XDG_RUNTIME_DIR=$TMPDIR WAYLAND_DISPLAY=wayland-0 foot
+```
+
+The socket is `$XDG_RUNTIME_DIR/wayland-0` (the first free `wayland-N`, or the name given with `-socket`).
+If `XDG_RUNTIME_DIR` is not set, `$TMPDIR` is used.
+
+Also you can do 
+```
+export TERMUX_WAYLAND_XSTARTUP="foot"
+termux-wayland
+```
+
+If you're done using Termux:Wayland just simply exit it through its notification drawer by expanding the Termux:Wayland notification then "Exit"
+But you should pay attention that `termux-wayland` command is still running and can not be killed this way.
+
+### Running X11 applications
+X11 programs run in Xwayland. `termux-wayland-x11` takes the same arguments as `termux-x11` and starts Termux:Wayland with a fullscreen Xwayland on the display:
+```
+termux-wayland-x11 :1 -xstartup "dbus-launch --exit-with-session xfce4-session"
+```
+or
+```
+termux-wayland-x11 :1 -- dbus-launch --exit-with-session xfce4-session
+```
+or
+```
+termux-wayland-x11 :1 &
+env DISPLAY=:1 dbus-launch --exit-with-session xfce4-session
+```
+`TERMUX_X11_XSTARTUP` works too. X server options (`-ac`, `-dpi`, `-listen tcp`...) go to Xwayland; Termux:X11's `-legacy-drawing`, `-force-bgra`, `-disable-dri3` and `-force-sysvshm` are accepted and ignored.
+
+If you do not use Termux:X11, you can make scripts written for it use Termux:Wayland:
+```
+ln -sf $PREFIX/bin/termux-wayland-x11 $PREFIX/bin/termux-x11
+```
+(It is not installed as `termux-x11` so that both apps can be installed at the same time.)
 
 ### Options
-
 ```
 termux-wayland [options] [-- command args...]
   -scale N          output scale (default: the app's preference, else from the screen density)
@@ -81,34 +121,161 @@ termux-wayland [options] [-- command args...]
   -- command args   same, without a shell
 ```
 
-Settings and controls are Termux:X11's (`termux-wayland-preference` works the same), plus:
+## Using with proot environment
+If you plan to use the program with proot, keep in mind that you need to launch proot/proot-distro with the --shared-tmp option. 
 
-- **Output → Wayland output scale**: `auto` (from the screen density) or 1-4. Toolkits that support
-  scaling (GTK, Qt, foot...) draw sharp at that scale.
-- **Keyboard → Show the keyboard when a text field is focused** (text-input-v3 clients).
-- **Pointer → Capture the pointer when a game locks it**.
+If passing this option is not possible, set the TMPDIR environment variable to point to the directory that corresponds to /tmp in the target container.
 
-## Building
-
-```sh
-git clone --recurse-submodules https://github.com/HomuHomu833/termux-wayland
-cd termux-wayland
-./gradlew assembleDebug
+Example, run in a Termux shell (not inside the proot container):
+```
+termux-wayland &
+proot-distro login ubuntu --shared-tmp
+```
+Then, inside the container:
+```
+export XDG_RUNTIME_DIR=/tmp WAYLAND_DISPLAY=wayland-0
+dbus-launch --exit-with-session labwc
 ```
 
-Native dependencies are submodules built by CMake: libwayland 1.23.1 (server side only) and libffi 3.4.6.
-The protocol glue in `lorie/src/main/cpp/protocols` is generated by `protocols/generate.sh`
-(wayland-scanner, wayland-protocols); the built-in keymap by `compositor/gen-keymap.sh`.
+## Using with chroot environment
+If you plan to use the program with chroot or unshare, you must run it as root and set the TMPDIR environment variable to point to the directory that corresponds to /tmp in the target container.
 
-`host/` builds the compositor for Linux (`twl-headless`): it renders off screen with Mesa, writes every
-frame to a PPM, and takes the app's input events on a socket, so it can be tested with real clients:
+This directory must be accessible from the shell from which you launch termux-wayland, i.e. it must be in the same SELinux context, same mount namespace, and so on.
 
-```sh
+You can get loader for nightly build from an artifact of [last successful build](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml)
+
+Do not forget to disable SELinux
+```
+setenforce 0
+export TMPDIR=/path/to/chroot/container/tmp
+export CLASSPATH=$(/system/bin/pm path com.termux.wayland | cut -d: -f2)
+/system/bin/app_process / --nice-name=termux-wayland com.termux.wayland.CmdEntryPoint
+```
+
+### Force stopping the compositor (running in termux background, not an activity)
+
+termux-wayland's compositor runs in process with name "termux-wayland". You can kill it by
+```
+pkill -f termux-wayland
+```
+
+### Closing Android activity (running in foreground, not the compositor)
+
+```
+am broadcast -a com.termux.wayland.ACTION_STOP -p com.termux.wayland
+```
+
+### Opening Termux:Wayland activity from command line
+
+```
+am start --user 0 -n com.termux.wayland/com.termux.wayland.MainActivity
+```
+
+### Logs
+If you need to obtain logs from the `com.termux.wayland` application,
+set the `TERMUX_WAYLAND_DEBUG` environment variable to 1, like this:
+`TERMUX_WAYLAND_DEBUG=1 termux-wayland`
+
+The log obtained in this way can be quite long.
+It's better to redirect the output of the command to a file right away.
+
+### Notification
+In Android 13, posting notifications was restricted so you should explicitly let Termux:Wayland show you notifications.
+
+Preferences:
+You can access preferences menu three ways:
+<details>
+<summary>By clicking "PREFERENCES" button on main screen when no client connected.</summary>
+
+![image](./.github/static/1.jpg)
+</details>
+<details>
+<summary>By clicking "Preferences" button in notification, if available.</summary>
+
+![image](./.github/static/2.jpg)
+</details>
+<details>
+<summary>By clicking "Preferences" application shortcut (long tap `Termux:Wayland` icon in launcher). </summary>
+
+![image](./.github/static/3.jpg)
+</details>
+
+(The screenshots are Termux:X11's; the menus are the same.)
+
+## Toggling keyboard
+Just press "Back" button.
+
+The keyboard also shows up by itself when a text field is focused in apps that support it (GTK, Qt, SDL, foot...); turn this off with "Show the keyboard when a text field is focused" in the keyboard preferences.
+
+## Touch gestures
+### Touchpad emulation mode.
+In touchpad emulation mode you can use the following gestures:
+* Tap for click
+* Double tap for double click
+* Two-finger tap for right click
+* Three-finger tap for middle click
+* Two-finger vertical swipe for vertical scroll
+* Two-finger horizontal swipe for horizontal scroll
+* Three-finger swipe down to show-hide additional keys bar.
+### Simulated touchscreen mode.
+In simulated touchscreen mode you can use the following gestures:
+* Single tap for left button click.
+* Long tap for mouse holding.
+* Double tap for double click
+* Two-finger tap for right click
+* Three-finger tap for middle click
+* Two-finger vertical swipe for vertical scroll
+* Two-finger horizontal swipe for horizontal scroll
+* Three-finger swipe down to show-hide additional keys bar.
+### Direct touch mode.
+Touches go to apps as Wayland touch events, so touch-aware apps (GTK, Qt, SDL...) can use their own gestures.
+
+When a game locks the pointer, Termux:Wayland captures the mouse for it ("Capture the pointer when a game locks it" in the pointer preferences).
+
+## Font or scaling is too small!
+Wayland apps scale by themselves: set "Wayland output scale" in the output preferences (`auto` picks it from your screen density), or start `termux-wayland` with `-scale`.
+```
+termux-wayland -scale 2 -- foot
+```
+
+For X11 apps in Xwayland, set the DPI in your desktop settings (in the case of xfce4 and lxqt via Applications Menu > Settings > Appearance) or pass `-dpi` to Xwayland.
+<details>
+<summary> Screenshot </summary>
+
+![image](./.github/static/dpi-scale.png) 
+</details>
+
+```
+termux-wayland-x11 :1 -xstartup "xfce4-session" -dpi 120
+```
+
+## Changing, dumping and restoring preferences from commandline
+
+It is possible to change preferences of termux-wayland from command line.
+`termux-wayland-nightly` package contains `termux-wayland-preference` tool which can be used like 
+```shell
+termux-wayland-preference [list] {key:value} [{key2:value2}]...
+```
+
+Use `termux-wayland-preference list` to dump current preferences.
+Use `termux-wayland-preference list > file` to dump current preferences to file.
+Use `termux-wayland-preference < file` to restore preferences from file.
+Use `termux-wayland-preference "fullscreen"="false" "showAdditionalKbd"="true"` to disable fullscreen and enable additional key bar. The full list of preferences you can modify is available with `termux-wayland-preference list` command. You can specify one or more preferences here.
+
+Termux:Wayland activity should be available in background or foreground, otherwise `termux-wayland-preference` tool will hang indefinitely.
+In the case if there is `Store preferences for secondary displays separately` preference active `termux-wayland-preference` will use/modify preferences of display where Termux:Wayland activity is currently opened.
+
+## Using with 3rd party apps
+It is possible to use Termux:Wayland with 3rd party apps.
+Check how `shell-loader/src/main/java/com/termux/wayland/Loader.java` works.
+
+## Testing without a phone
+`host/` builds the compositor for Linux: it draws off screen, saves each frame as an image and takes the app's input events from a socket, so it can be tried with real clients.
+```
 cmake -S host -B build-host -G Ninja && ninja -C build-host
 build-host/twl-headless --socket wl-test --size 1280x720 --scale 2 --dump /tmp/frame.ppm --events /tmp/twl-ev &
 WAYLAND_DISPLAY=wl-test gtk3-widget-factory
 ```
 
-## License
-
-GPL-3.0, like Termux:X11 (see `LICENSE`). libwayland and libffi are MIT.
+# License
+Released under the [GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.html), like Termux:X11. libwayland and libffi are MIT.

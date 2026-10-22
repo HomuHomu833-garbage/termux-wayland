@@ -1,0 +1,68 @@
+#!/data/data/@EMBEDDED_APPLICATION_ID@/files/usr/bin/bash
+# termux-x11's command line on Termux:Wayland: starts the compositor with a fullscreen
+# Xwayland on the display, so scripts written for Termux:X11 keep working:
+#   termux-wayland-x11 :1 -xstartup "xfce4-session"
+#   termux-wayland-x11 :1 -- xfce4-session
+#   termux-wayland-x11 :1 &   (then DISPLAY=:1 ...)
+# Link it as termux-x11 to use it in place of Termux:X11 (see README).
+
+if [ "$1" = "--inner" ]; then
+  # Running under termux-wayland, WAYLAND_DISPLAY set: $2 display, $3 xstartup,
+  # then Xwayland options up to "--", then the command.
+  display=$2 xstartup=$3
+  shift 3
+  xwayland_args=()
+  while [ $# -gt 0 ] && [ "$1" != "--" ]; do xwayland_args+=("$1"); shift; done
+  [ "$1" = "--" ] && shift
+
+  Xwayland "$display" -fullscreen "${xwayland_args[@]}" &
+  xwayland=$!
+  for _ in $(seq 1 100); do
+    [ -S "${TMPDIR:-/tmp}/.X11-unix/X${display#:}" ] && break
+    kill -0 "$xwayland" 2>/dev/null || exit 1
+    sleep 0.1
+  done
+
+  export DISPLAY=$display
+  if [ $# -gt 0 ]; then
+    "$@"
+  elif [ -n "$xstartup" ]; then
+    sh -c "$xstartup"
+  else
+    wait "$xwayland"
+    exit $?
+  fi
+  status=$?
+  kill "$xwayland" 2>/dev/null
+  exit $status
+fi
+
+if ! command -v Xwayland >/dev/null; then
+  echo "Xwayland is not installed: pkg i x11-repo && pkg i xwayland"
+  exit 1
+fi
+
+display=:0
+xstartup=
+wayland_args=()
+xwayland_args=()
+command=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    :[0-9]*) display=$1 ;;
+    -xstartup) xstartup=$2; shift ;;
+    -scale|-keymap|-socket) wayland_args+=("$1" "$2"); shift ;;
+    -no-dmabuf|-no-dmabuf-import|-no-ahb) wayland_args+=("$1") ;;
+    # Termux:X11 renderer options: nothing to do on Wayland
+    -legacy-drawing|-force-bgra|-disable-dri3|-force-sysvshm) ;;
+    -tag) echo "-tag: separate windows per display are not supported, ignored"; shift ;;
+    --) shift; command=("$@"); break ;;
+    # everything else (-ac, -dpi, -listen...) is an X server option
+    *) xwayland_args+=("$1") ;;
+  esac
+  shift
+done
+[ -z "$xstartup" ] && [ ${#command[@]} -eq 0 ] && xstartup=$TERMUX_X11_XSTARTUP
+
+exec termux-wayland "${wayland_args[@]}" -- "$(command -v "$0" || echo "$0")" --inner "$display" "$xstartup" \
+  "${xwayland_args[@]}" -- "${command[@]}"

@@ -50,13 +50,13 @@ For X11 programs you also need Xwayland: `pkg i x11-repo && pkg i xwayland`.
 
 ### Avoiding slowdowns
 <details>
-<summary>Android gives less CPU time to apps that aren't on screen — install the sharedUid APK to avoid this</summary>
+<summary>Android gives less CPU time to apps that aren't on screen: install the sharedUid APK to avoid this</summary>
 
 Android gives less CPU time to apps that aren't on screen. Once Termux:Wayland opens, Android treats Termux itself as no longer being on screen, so things running inside Termux (like your desktop apps) can slow down.
 
 To avoid this, install `termux-wayland-universal-sharedUid-debug.apk` instead of the regular one (same CI artifacts). This variant runs as part of Termux itself, so Android keeps treating it as one app and doesn't slow it down.
 
-This variant only works with the Termux app installed **from GitHub**, not F-Droid or Google Play — those are signed with different keys, and a shared UID requires matching signatures.
+This variant only works with the Termux app installed **from GitHub**, not F-Droid or Google Play. Those are signed with different keys, and a shared UID requires matching signatures.
 </details>
 
 ## Running Graphical Applications

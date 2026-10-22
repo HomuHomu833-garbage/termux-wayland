@@ -21,7 +21,7 @@
 #pragma ide diagnostic ignored "cppcoreguidelines-narrowing-conversions"
 #pragma ide diagnostic ignored "ConstantFunctionResult"
 #define log(prio, ...) __android_log_print(ANDROID_LOG_ ## prio, "LorieNative", __VA_ARGS__)
-// `r` must be a LorieViewResources* — the connection fd is per-instance state, not a process global.
+// `r` must be a LorieViewResources*: the connection fd is per-instance state, not a process global.
 #define sendEvent(r, ...) do { if ((r) && (r)->connFd != -1) { lorieEvent e = { __VA_ARGS__ }; write((r)->connFd, &e, sizeof(e)); } } while (0)
 
 bool lorieDebugEnabled = false;

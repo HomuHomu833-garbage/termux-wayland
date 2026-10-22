@@ -19,4 +19,4 @@ fi
 export CLASSPATH=/data/data/@EMBEDDED_APPLICATION_ID@/files/usr/libexec/termux-wayland/loader.apk
 unset LD_LIBRARY_PATH LD_PRELOAD
 [ -n "$(trap -p USR1)" ] && export TERMUX_WAYLAND_NOTIFY_PARENT=1
-exec /system/bin/app_process -Xnoimage-dex2oat / --nice-name="termux-wayland @APPLICATION_ID@ $*" com.termux.wayland.Loader "$@"
+exec /system/bin/app_process -Xnoimage-dex2oat / --nice-name="${TERMUX_WAYLAND_NICE_NAME:-termux-wayland @APPLICATION_ID@ $*}" com.termux.wayland.Loader "$@"

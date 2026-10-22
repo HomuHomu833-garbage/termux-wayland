@@ -1,4 +1,7 @@
 #!/data/data/@EMBEDDED_APPLICATION_ID@/files/usr/bin/bash
 # termux-x11 from Termux:Wayland's termux-x11-nightly package: the same command line, served by
 # a fullscreen Xwayland on Termux:Wayland (see termux-wayland-x11).
+# The server takes Termux:X11's process name, so scripts that stop it with
+# `pkill -f "^termux-x11 com.termux.x11"` (or `pkill -f termux-x11`) keep working.
+export TERMUX_WAYLAND_NICE_NAME="termux-x11 com.termux.x11 $*"
 exec termux-wayland-x11 "$@"

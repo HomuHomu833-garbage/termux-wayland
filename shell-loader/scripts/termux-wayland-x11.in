@@ -11,6 +11,7 @@ if [ "$1" = "--inner" ]; then
   # then Xwayland options up to "--", then the command.
   display=$2 xstartup=$3
   shift 3
+  unset TERMUX_WAYLAND_NICE_NAME
   xwayland_args=()
   while [ $# -gt 0 ] && [ "$1" != "--" ]; do xwayland_args+=("$1"); shift; done
   [ "$1" = "--" ] && shift
@@ -28,6 +29,8 @@ if [ "$1" = "--inner" ]; then
   done
 
   export DISPLAY=$display
+  # Open Termux:Wayland's screen (scripts for Termux:X11 open Termux:X11's instead).
+  am start --user 0 -n @APPLICATION_ID@/@APPLICATION_ID@.MainActivity >/dev/null 2>&1 &
   if [ $# -gt 0 ]; then
     "$@"
   elif [ -n "$xstartup" ]; then

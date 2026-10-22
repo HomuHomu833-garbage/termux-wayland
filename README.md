@@ -44,9 +44,17 @@ compositor (labwc, sway, weston...) as a Wayland client, or an X11 desktop throu
 ## Setup Instructions
 Termux:Wayland requires Android 8 or later. It consists of an Android app and a companion termux package, and you must install both.
 
-The Android app and the companion package are available from the artifacts of the [last successful build](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml) of this repository. Download and install `termux-wayland-universal-debug.apk`, then install the companion package with `dpkg -i termux-wayland-nightly-*-all.deb`.
+The Android app and the companion packages are available from the artifacts of the [last successful build](https://github.com/HomuHomu833/termux-wayland/actions/workflows/debug_build.yml) of this repository, and from the [nightly release tag](https://github.com/HomuHomu833/termux-wayland/releases/tag/nightly). Download and install `termux-wayland-universal-debug.apk`, then install the companion package:
+```
+apt install ./termux-wayland-nightly-*-all.deb
+```
 
-For X11 programs you also need Xwayland: `pkg i x11-repo && pkg i xwayland`.
+For X11 programs, also install this repository's `termux-x11-nightly` package. It replaces Termux:X11's package of the same name: `termux-x11` and `termux-x11-preference` then run on Termux:Wayland through Xwayland, so scripts written for Termux:X11 keep working. It needs Xwayland from x11-repo:
+```
+pkg i x11-repo
+apt install ./termux-wayland-nightly-*-all.deb ./termux-x11-nightly-*-all.deb
+```
+Its version has an epoch (`1:...`), so `pkg upgrade` does not swap it back for Termux:X11's. To go back to Termux:X11, remove it and install Termux:X11's `termux-x11-nightly`.
 
 ### Avoiding slowdowns
 <details>
@@ -87,26 +95,22 @@ If you're done using Termux:Wayland just simply exit it through its notification
 But you should pay attention that `termux-wayland` command is still running and can not be killed this way.
 
 ### Running X11 applications
-X11 programs run in Xwayland. `termux-wayland-x11` takes the same arguments as `termux-x11` and starts Termux:Wayland with a fullscreen Xwayland on the display:
+X11 programs run in Xwayland. With this repository's `termux-x11-nightly` package installed, `termux-x11` takes its usual arguments and starts Termux:Wayland with a fullscreen Xwayland on the display:
 ```
-termux-wayland-x11 :1 -xstartup "dbus-launch --exit-with-session xfce4-session"
-```
-or
-```
-termux-wayland-x11 :1 -- dbus-launch --exit-with-session xfce4-session
+termux-x11 :1 -xstartup "dbus-launch --exit-with-session xfce4-session"
 ```
 or
 ```
-termux-wayland-x11 :1 &
+termux-x11 :1 -- dbus-launch --exit-with-session xfce4-session
+```
+or
+```
+termux-x11 :1 &
 env DISPLAY=:1 dbus-launch --exit-with-session xfce4-session
 ```
 `TERMUX_X11_XSTARTUP` works too. X server options (`-ac`, `-dpi`, `-listen tcp`...) go to Xwayland; Termux:X11's `-legacy-drawing`, `-force-bgra`, `-disable-dri3` and `-force-sysvshm` are accepted and ignored.
 
-If you do not use Termux:X11, you can make scripts written for it use Termux:Wayland:
-```
-ln -sf $PREFIX/bin/termux-wayland-x11 $PREFIX/bin/termux-x11
-```
-(It is not installed as `termux-x11` so that both apps can be installed at the same time.)
+Without that package, the same command is `termux-wayland-x11` (in `termux-wayland-nightly`), so Termux:X11 can stay installed next to Termux:Wayland.
 
 ### Options
 ```
@@ -246,7 +250,7 @@ For X11 apps in Xwayland, set the DPI in your desktop settings (in the case of x
 </details>
 
 ```
-termux-wayland-x11 :1 -xstartup "xfce4-session" -dpi 120
+termux-x11 :1 -xstartup "xfce4-session" -dpi 120
 ```
 
 ## Changing, dumping and restoring preferences from commandline

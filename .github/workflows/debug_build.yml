@@ -68,10 +68,10 @@ jobs:
     - name: Store companion package
       uses: actions/upload-artifact@v7
       with:
-        name: termux-companion packages
+        name: termux-companion-packages
         path: |
-          ./shell-loader/build/outputs/companion/termux-wayland-*-all.deb
-          ./shell-loader/build/outputs/companion/termux-wayland-*-any.pkg.tar.xz
+          ./shell-loader/build/outputs/companion/termux-wayland-nightly-*-all.deb
+          ./shell-loader/build/outputs/companion/termux-x11-nightly-*-all.deb
 
     - name: Store unstripped libraries with debug symbols
       uses: actions/upload-artifact@v7
@@ -95,5 +95,5 @@ jobs:
         files: |
           ./lorie-app/build/outputs/apk/standalone/debug/termux-wayland-universal-debug.apk
           ./lorie-app/build/outputs/apk/sharedUid/debug/termux-wayland-universal-sharedUid-debug.apk
-          ./shell-loader/build/outputs/companion/termux-wayland-*-all.deb
-          ./shell-loader/build/outputs/companion/termux-wayland-*-any.pkg.tar.xz
+          ./shell-loader/build/outputs/companion/termux-wayland-nightly-*-all.deb
+          ./shell-loader/build/outputs/companion/termux-x11-nightly-*-all.deb

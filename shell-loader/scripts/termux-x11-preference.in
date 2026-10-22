@@ -1,0 +1,3 @@
+#!/data/data/@EMBEDDED_APPLICATION_ID@/files/usr/bin/bash
+# termux-x11-preference from Termux:Wayland's termux-x11-nightly package: the same preferences, in Termux:Wayland.
+exec termux-wayland-preference "$@"

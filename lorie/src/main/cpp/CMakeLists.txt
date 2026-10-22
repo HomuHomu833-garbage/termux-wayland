@@ -25,12 +25,14 @@ elseif (CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
     set(TARGET X86_64)
     set(FFI_ARCH_SOURCES src/x86/ffi64.c src/x86/unix64.S src/x86/ffiw64.c src/x86/win64.S)
     set(FFI_ARCH_DIR x86)
+    set(FFI_ARCH_DEFINES "#define HAVE_AS_X86_PCREL 1\n#define HAVE_AS_X86_64_UNWIND_SECTION_TYPE 1")
     set(HAVE_LONG_DOUBLE 1)
     set(SIZEOF_LONG_DOUBLE 16)
 elseif (CMAKE_ANDROID_ARCH_ABI STREQUAL "x86")
     set(TARGET X86)
     set(FFI_ARCH_SOURCES src/x86/ffi.c src/x86/sysv.S)
     set(FFI_ARCH_DIR x86)
+    set(FFI_ARCH_DEFINES "#define HAVE_AS_X86_PCREL 1")
     set(HAVE_LONG_DOUBLE 1)
     set(SIZEOF_LONG_DOUBLE 12)
 else ()
@@ -48,8 +50,7 @@ file(WRITE ${FFI_GEN}/fficonfig.h.new "
 #define HAVE_MKOSTEMP 1
 #define HAVE_HIDDEN_VISIBILITY_ATTRIBUTE 1
 #define HAVE_AS_CFI_PSEUDO_OP 1
-#define HAVE_AS_X86_PCREL 1
-#define HAVE_AS_X86_64_UNWIND_SECTION_TYPE 1
+${FFI_ARCH_DEFINES}
 #define EH_FRAME_FLAGS \"a\"
 #define FFI_MMAP_EXEC_WRIT 1
 #define SIZEOF_DOUBLE 8

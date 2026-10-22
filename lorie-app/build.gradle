@@ -22,12 +22,12 @@ abstract class VerifySharedUidProcess extends DefaultTask {
 }
 
 android {
-    namespace 'com.termux.x11.app'
+    namespace 'com.termux.wayland.app'
     compileSdkVersion 34
     ndkVersion termuxX11NdkVersion
     defaultConfig {
-        applicationId "com.termux.x11"
-        minSdkVersion 24
+        applicationId "com.termux.wayland"
+        minSdkVersion 26
         targetSdkVersion 34
         versionCode 15
         versionName termuxX11VersionName
@@ -66,7 +66,7 @@ androidComponents {
     onVariants(selector().all()) { variant ->
         def name = variant.flavorName == 'standalone' ? variant.buildType : "${variant.flavorName}-${variant.buildType}"
         variant.outputs.each { output ->
-            output.outputFileName.set("termux-x11-universal-${name}.apk")
+            output.outputFileName.set("termux-wayland-universal-${name}.apk")
         }
         if (variant.flavorName == 'sharedUid') {
             def verify = tasks.register("verify${variant.name.capitalize()}Process", VerifySharedUidProcess) {

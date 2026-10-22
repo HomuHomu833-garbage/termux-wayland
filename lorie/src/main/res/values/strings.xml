@@ -1,10 +1,10 @@
 <!DOCTYPE resources [
     <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
     <!ENTITY TERMUX_APP_NAME "Termux">
-    <!ENTITY TERMUX_X11_APP_NAME "Termux:X11">
+    <!ENTITY TERMUX_WAYLAND_APP_NAME "Termux:Wayland">
     ]>
 <resources>
-    <string name="lorie_app_name">&TERMUX_X11_APP_NAME;</string>
+    <string name="lorie_app_name">&TERMUX_WAYLAND_APP_NAME;</string>
 
     <string name="not_connected">Not connected</string>
     <string name="no_server_signal">X server stalled</string>
@@ -44,6 +44,11 @@ E.g. <b>META</b> for <i>META key</i>, \n
 
     <string name="lorie_pref_displayResolutionMode">Display resolution mode</string>
     <string name="lorie_pref_displayScale">Display scale, %</string>
+    <string name="lorie_pref_waylandScale">Wayland output scale</string>
+    <string name="lorie_pref_waylandScale_summary">How much bigger apps draw (wl_output scale). auto: from the screen density</string>
+    <string name="lorie_pref_captureOnPointerLock">Capture the pointer when a game locks it</string>
+    <string name="lorie_pref_showKeyboardOnTextInput">Show the keyboard when a text field is focused</string>
+    <string name="lorie_pref_showKeyboardOnTextInput_summary">For apps using text-input-v3 (GTK, Qt, SDL, foot...)</string>
     <string name="lorie_pref_displayResolutionExact">Display resolution</string>
     <string name="lorie_pref_displayResolutionCustom">Display resolution</string>
     <string name="lorie_pref_displayFilteringMode">Display filtering mode</string>

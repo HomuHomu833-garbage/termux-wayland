@@ -10,7 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
-#include <pixman.h>
 #include <stdbool.h>
 #include <linux/memfd.h>
 #include <sys/ioctl.h>
@@ -82,6 +81,12 @@ static int memfd_create(const char *name, unsigned int flags) {
     errno = ENOSYS;
 	return -1;
 #endif
+}
+
+/* Copies 32bpp rows; strides in pixels. */
+static void blt32(const void* src, void* dst, int srcStride, int dstStride, int width, int height) {
+    for (int y = 0; y < height; y++)
+        memcpy((uint32_t*) dst + (size_t) y * dstStride, (const uint32_t*) src + (size_t) y * srcStride, (size_t) width * 4);
 }
 
 static inline size_t alignToPage(size_t size) {
@@ -242,7 +247,7 @@ __LIBC_HIDDEN__ void LorieBuffer_convert(LorieBuffer* buffer, int8_t type, int8_
             return;
         }
 
-        pixman_blt(buffer->desc.data, data, buffer->desc.stride, buffer->desc.stride, 32, 32, 0, 0, 0, 0, buffer->desc.width, buffer->desc.height);
+        blt32(buffer->desc.data, data, buffer->desc.stride, buffer->desc.stride, buffer->desc.width, buffer->desc.height);
 
         buffer->desc.type = type;
         buffer->desc.format = format;
@@ -269,7 +274,7 @@ __LIBC_HIDDEN__ void LorieBuffer_convert(LorieBuffer* buffer, int8_t type, int8_
 
         if (__builtin_available(android 26, *)) {
             if (AHardwareBuffer_lock(b, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN | AHARDWAREBUFFER_USAGE_CPU_WRITE_OFTEN, -1, NULL, &data) == 0) {
-                pixman_blt(buffer->desc.data, data, buffer->desc.stride, (int) desc.stride, 32, 32, 0, 0, 0, 0, buffer->desc.width, buffer->desc.height);
+                blt32(buffer->desc.data, data, buffer->desc.stride, (int) desc.stride, buffer->desc.width, buffer->desc.height);
                 AHardwareBuffer_unlock(b, NULL);
             }
         }

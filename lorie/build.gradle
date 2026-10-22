@@ -22,12 +22,12 @@ def hostProject = hostProjects[0]
 def hostApplicationId = hostProject.android.defaultConfig.applicationId ?: hostProject.android.namespace
 
 android {
-    namespace 'com.termux.x11'
+    namespace 'com.termux.wayland'
     //noinspection GrDeprecatedAPIUsage
     compileSdkVersion 34
     ndkVersion termuxX11NdkVersion
     defaultConfig {
-        minSdkVersion 24
+        minSdkVersion 26
         targetSdkVersion 34
         buildConfigField "String", "VERSION_NAME", "\"${termuxX11VersionName}\""
         buildConfigField "String", "COMMIT", "\"" + ("git rev-parse HEAD\n".execute().getText().trim() ?: (System.getenv('CURRENT_COMMIT') ?: "NO_COMMIT")) + "\""
@@ -75,16 +75,16 @@ afterEvaluate {
                 preferences << [ type: 'Boolean',  key: node.getAttribute("app:key"), default: node.getAttribute("app:defaultValue") ]
         }
 
-        def out = file('build/generated/java/com/termux/x11/Prefs.java')
+        def out = file('build/generated/java/com/termux/wayland/Prefs.java')
         out.getParentFile().exists() || out.getParentFile().mkdirs()
         out.delete()
         out.createNewFile()
 
-        out << 'package com.termux.x11;\n'
+        out << 'package com.termux.wayland;\n'
         out << 'import java.util.HashMap;\n'
         out << 'import android.content.Context;\n'
         out << 'import android.content.SharedPreferences;\n'
-        out << 'import com.termux.x11.utils.TermuxX11ExtraKeys;\n'
+        out << 'import com.termux.wayland.utils.TermuxX11ExtraKeys;\n'
         out << '\n'
         out << 'public class Prefs extends LoriePreferences.PrefsProto {\n'
         preferences.each {

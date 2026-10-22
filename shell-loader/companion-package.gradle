@@ -1,4 +1,4 @@
-// Builds the .deb and .pkg.tar.xz companion packages, which put termux-x11, termux-x11-preference
+// Builds the .deb and .pkg.tar.xz companion packages, which put termux-wayland, termux-wayland-preference
 // and the loader apk into a termux installation.
 
 buildscript {
@@ -19,10 +19,10 @@ import org.apache.tools.ant.filters.ReplaceTokens
 
 import java.security.MessageDigest
 
-def pkgName = 'termux-x11-nightly'
+def pkgName = 'termux-wayland-nightly'
 def pkgVersion = (file("$rootDir/lorie/version.gradle").text =~ /version = "([^"]+)"/)[0][1] + '-0'
-def pkgDescription = 'Companion package for termux-x11 app'
-def pkgHomepage = 'https://github.com/termux/termux-x11'
+def pkgDescription = 'Companion package for termux-wayland app'
+def pkgHomepage = 'https://github.com/HomuHomu833/termux-wayland'
 def pkgMaintainer = 'Twaik Yont @twaik'
 def pkgDepends = 'xkeyboard-config'
 
@@ -54,10 +54,10 @@ tasks.register('buildCompanionPackage') {
         int time = (System.currentTimeMillis() / 1000L) as int
         def prefix = "data/data/$embeddedApplicationId/files/usr".toString()
 
-        def scripts = ['termux-x11', 'termux-x11-preference'].collectEntries {
+        def scripts = ['termux-wayland', 'termux-wayland-preference'].collectEntries {
             ["$prefix/bin/$it".toString(), file("${scriptsDir.get()}/$it").bytes]
         }
-        def content = scripts + [("$prefix/libexec/termux-x11/loader.apk".toString()): loaderApk.get().asFile.bytes]
+        def content = scripts + [("$prefix/libexec/termux-wayland/loader.apk".toString()): loaderApk.get().asFile.bytes]
         // Every file plus the directories leading to it; sorting the whole set puts each directory
         // right before its contents, which is the order both archives expect.
         def paths = content.keySet().collectMany { path ->
@@ -84,7 +84,7 @@ Homepage: $pkgHomepage
 Depends: $pkgDepends
 Description: $pkgDescription
 """
-        def chmodLoader = "chmod 400 /$prefix/libexec/termux-x11/loader.apk"
+        def chmodLoader = "chmod 400 /$prefix/libexec/termux-wayland/loader.apk"
 
         def controlTarGz = new ByteArrayOutputStream()
         new TarArchiveOutputStream(new GzipCompressorOutputStream(controlTarGz)).withCloseable { tar ->
@@ -144,9 +144,9 @@ packager = $pkgMaintainer
 size = ${content.values().sum { it.length }}
 arch = any
 license = GPL-3.0
-replaces = termux-x11
-conflict = termux-x11
-provides = termux-x11
+replaces = termux-wayland
+conflict = termux-wayland
+provides = termux-wayland
 ${pacmanDepends.join('\n')}
 """.bytes,
         ]

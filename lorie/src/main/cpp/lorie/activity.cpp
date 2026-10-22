@@ -146,7 +146,7 @@ static jlong nativeInit(JNIEnv *env, jobject thiz) {
         CharBuffer.self = FindClassOrDie(env,  "java/nio/CharBuffer");
         CharBuffer.toString = FindMethodOrDie(env, CharBuffer.self, "toString", "()Ljava/lang/String;", JNI_FALSE);
 
-        MainActivity.self = FindClassOrDie(env,  "com/termux/x11/MainActivity");
+        MainActivity.self = FindClassOrDie(env,  "com/termux/wayland/MainActivity");
         MainActivity.clientConnectedStateChanged = FindMethodOrDie(env, MainActivity.self, "clientConnectedStateChanged", "()V", JNI_FALSE);
         MainActivity.lastServerHeartbeat = env->GetFieldID(MainActivity.self, "lastServerHeartbeat", "J");
         MainActivity.resetIme = FindMethodOrDie(env, env->GetObjectClass(thiz), "resetIme", "()V", JNI_FALSE);
@@ -165,7 +165,7 @@ LorieViewResources::LorieViewResources(JNIEnv *callerEnv, jobject view) {
     vm->AttachCurrentThread(&env, nullptr);
     thiz = env->NewGlobalRef(view);
 
-    jfieldID activityField = env->GetFieldID(env->GetObjectClass(view), "activity", "Lcom/termux/x11/MainActivity;");
+    jfieldID activityField = env->GetFieldID(env->GetObjectClass(view), "activity", "Lcom/termux/wayland/MainActivity;");
     jobject a = env->GetObjectField(view, activityField);
     if (a)
         activity = env->NewGlobalRef(a);
@@ -283,6 +283,14 @@ int LorieViewResources::xcallback(int fd, int events) {
                         env->SetLongField(activity, MainActivity.lastServerHeartbeat, nowMs());
                     break;
                 }
+                case EVENT_TEXT_INPUT_STATE:
+                case EVENT_POINTER_CAPTURE: {
+                    jmethodID id = env->GetMethodID(env->GetObjectClass(thiz), e.type == EVENT_TEXT_INPUT_STATE ? "onTextInputState" : "onPointerLock", "(Z)V");
+                    if (id)
+                        env->CallVoidMethod(thiz, id, (jboolean) e.textInput.enabled);
+                    env->ExceptionClear();
+                    break;
+                }
                 case EVENT_SYNC_REPLY: {
                     jmethodID id = env->GetMethodID(env->GetObjectClass(thiz), "onSyncReply", "(I)V");
                     env->CallVoidMethod(thiz, id, (jint) e.sync.serial);
@@ -388,7 +396,7 @@ extern char* __progname;
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
     JNIEnv* env;
 
-    if (!strcmp(__progname, "com.termux.x11")) {
+    if (!strcmp(__progname, "com.termux.wayland")) {
         // Redirects stderr to logcat.
         pthread_create([]{ static pthread_t t; return &t; }(), nullptr, +[](__unused void* cookie) -> void* {
             FILE *fp;
@@ -501,6 +509,10 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
                     }
                 }
             }},
+            {"sendOutputConfig", "(JII)V", (void *) +[](__unused JNIEnv* env, __unused jobject cls, jlong ptr, jint scale, jint dpi) {
+                auto* r = (LorieViewResources*) ptr;
+                sendEvent(r, .outputConfig = { .t = EVENT_OUTPUT_CONFIG, .scale = (uint16_t) scale, .dpi = (uint16_t) dpi });
+            }},
             {"sendMouseEvent", "(JFFIZZ)V", (void *) +[](JNIEnv* env, __unused jobject cls, jlong ptr, jfloat x, jfloat y, jint which_button, jboolean button_down, jboolean relative) {
                 lastInputTimestampMs = nowMs();
                 auto* r = (LorieViewResources*) ptr;
@@ -551,7 +563,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
             }},
     };
     vm->AttachCurrentThread(&env, nullptr);
-    jclass cls = env->FindClass("com/termux/x11/LorieView");
+    jclass cls = env->FindClass("com/termux/wayland/LorieView");
     env->RegisterNatives(cls, methods, sizeof(methods)/sizeof(methods[0]));
 
     pthread_t freeformLookupThread;
@@ -577,7 +589,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, __unused void *reserved) {
                     env->CallVoidMethod(options, ActivityOptions.setLaunchWindowingMode, 5); // WINDOWING_MODE_FREEFORM
             }},
     };
-    env->RegisterNatives(env->FindClass("com/termux/x11/MainActivity"), mainActivityMethods, sizeof(mainActivityMethods)/sizeof(mainActivityMethods[0]));
+    env->RegisterNatives(env->FindClass("com/termux/wayland/MainActivity"), mainActivityMethods, sizeof(mainActivityMethods)/sizeof(mainActivityMethods[0]));
 
     registerCmdEntryPointNatives(env);
 

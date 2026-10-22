@@ -6,17 +6,24 @@
 #include <android/log.h>
 
 #include <stdbool.h>
-#include <X11/Xdefs.h>
-#include <X11/keysymdef.h>
 #include <jni.h>
-#include <screenint.h>
 #include <errno.h>
+#include <time.h>
+#include <unistd.h>
+#include <string.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include "linux/input-event-codes.h"
 #include "buffer.h"
 
-#define PORT 7892
-#define DOCUMENT_PORT_BASE 7900
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
+
+// Termux:X11 uses 7892/7900: different ports so both can run at the same time.
+#define PORT 7893
+#define DOCUMENT_PORT_BASE 7950
 #define MAGIC "0xDEADBEEF"
 
 #ifdef __cplusplus
@@ -25,37 +32,9 @@ extern "C" {
 
 struct lorie_shared_server_state;
 
-void lorieConfigureNotify(int width, int height, int framerate, size_t name_size, char* name);
-void lorieEnableClipboardSync(Bool enable);
-void lorieSendClipboardData(const char* data);
-void lorieInitClipboard(void);
-void lorieRequestClipboard(void);
-void lorieHandleClipboardAnnounce(void);
-void lorieHandleClipboardData(const char* data);
-void lorieSetStylusEnabled(Bool enabled);
-void lorieSyncLockKeysState(uint8_t state);
-void lorieWakeServer(void);
-void lorieRecheckGpuCopies(void);
-void lorieChoreographerFrameCallback(__unused long t, AChoreographer* d);
-void lorieActivityConnected(void);
-void lorieSendSharedServerState(int memfd);
-void lorieRegisterBuffer(LorieBuffer* buffer);
-void lorieUnregisterBuffer(LorieBuffer* buffer);
+extern bool lorieDebugEnabled; // Set in activity.cpp's startLogcat, only called when TERMUX_WAYLAND_DEBUG=1.
 bool lorieConnectionAlive(void);
-extern bool lorieDebugEnabled; // Set in activity.cpp's startLogcat, only called when TERMUX_X11_DEBUG=1.
-void lorieSetRendererWakeupCond(int fd);
-void lorieSetCursorVisible(Bool visible);
-void lorieSendSyncReply(uint32_t serial);
-void lorieSendHeartbeat(void);
-
-typedef struct {
-    uint16_t code; // Linux key code that does not fit into X keycode range.
-    uint32_t keysym;
-} lorieExtendedKey;
-extern const lorieExtendedKey lorieExtendedKeys[];
-extern const size_t lorieExtendedKeysCount;
 void registerCmdEntryPointNatives(JNIEnv *env);
-void lorieListenForKnocks(int port, const char *tag);
 
 __unused void rendererTestCapabilities(int* legacy_drawing, int* gpu_present_disabled);
 
@@ -124,6 +103,9 @@ typedef enum {
     EVENT_SYNC,
     EVENT_SYNC_REPLY,
     EVENT_HEARTBEAT,
+    EVENT_OUTPUT_CONFIG,     // activity -> compositor: Wayland output scale and density
+    EVENT_TEXT_INPUT_STATE,  // compositor -> activity: a text field gained/lost focus (soft keyboard)
+    EVENT_POINTER_CAPTURE,   // compositor -> activity: a client locked the pointer (games)
 } eventType;
 
 typedef union {
@@ -183,6 +165,14 @@ typedef union {
         uint8_t t;
         uint32_t serial;
     } sync;
+    struct {
+        uint8_t t;
+        uint16_t scale, dpi; // scale 0: from dpi
+    } outputConfig;
+    struct {
+        uint8_t t;
+        uint8_t enabled;
+    } textInput;
 } lorieEvent;
 
 typedef struct { int16_t x1, y1, x2, y2; } LorieGpuCopyRect;
@@ -201,7 +191,7 @@ typedef struct {
 
 struct lorie_shared_server_state {
     /*
-     * Renderer and X server are separated into 2 different processes.
+     * Renderer and compositor are separated into 2 different processes.
      * Root window and cursor content and properties are shared across these 2 processes.
      * Reading/drawing root window in renderer the same time X server writes it can cause
      * tearing, texture garbling and other visual artifacts so we should block X server while we are drawing.

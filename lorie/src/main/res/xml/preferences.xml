@@ -14,6 +14,7 @@
         <SeekBarPreference app:key="displayScale" app:defaultValue="100" app:min="30" android:max="300" app:seekBarIncrement="10" app:showSeekBarValue="true" app:updatesContinuously="true" />
         <ListPreference app:key="displayResolutionExact" app:defaultValue="1280x1024" app:entries="@array/displayResolution" app:entryValues="@array/displayResolution" tools:ignore="DuplicateSpeakableTextCheck" />
         <EditTextPreference app:key="displayResolutionCustom" app:defaultValue="1280x1024" app:useSimpleSummaryProvider="true" />
+        <ListPreference app:key="waylandScale" app:defaultValue="auto" app:entries="@array/waylandScaleVariants" app:entryValues="@array/waylandScaleVariants" />
         <ListPreference app:key="displayFilteringMode" app:defaultValue="bilinear" app:entries="@array/displayFilteringVariants" app:entryValues="@array/displayFilteringVariants"  />
         <SwitchPreferenceCompat app:key="adjustResolution" app:defaultValue="false" />
         <SwitchPreferenceCompat app:key="displayStretch" app:defaultValue="false" />
@@ -32,6 +33,7 @@
         <SwitchPreferenceCompat app:key="stylusButtonContactModifierMode" app:defaultValue="false" />
         <SwitchPreferenceCompat app:key="showMouseHelper" app:defaultValue="false" />
         <SwitchPreferenceCompat app:key="pointerCapture" app:defaultValue="false" />
+        <SwitchPreferenceCompat app:key="captureOnPointerLock" app:defaultValue="true" />
         <ListPreference app:key="transformCapturedPointer" app:defaultValue="no" app:entries="@array/transformCapturedPointerEntries" app:entryValues="@array/transformCapturedPointerValues" />
         <SeekBarPreference app:key="capturedPointerSpeedFactor" app:defaultValue="100" app:min="1" android:max="300" app:seekBarIncrement="1" app:showSeekBarValue="true" app:updatesContinuously="true" />
         <SwitchPreferenceCompat app:key="tapToMove" app:defaultValue="true" />
@@ -43,6 +45,7 @@
         <!-- this preference should be a part of `Prefs` but should not appear in PreferenceScreen -->
         <SwitchPreferenceCompat app:key="additionalKbdVisible" app:defaultValue="true" app:isPreferenceVisible="false" />
         <SwitchPreferenceCompat app:key="showIMEWhileExternalConnected" app:defaultValue="true" />
+        <SwitchPreferenceCompat app:key="showKeyboardOnTextInput" app:defaultValue="true" />
         <SwitchPreferenceCompat app:key="preferScancodes" app:defaultValue="false" />
         <SwitchPreferenceCompat app:key="hardwareKbdScancodesWorkaround" app:defaultValue="true" />
         <SwitchPreferenceCompat app:key="dexMetaKeyCapture" app:defaultValue="false" />

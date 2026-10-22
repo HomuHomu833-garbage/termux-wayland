@@ -2,6 +2,6 @@
 
 -dontobfuscate
 
--keep class com.termux.x11.Loader {
+-keep class com.termux.wayland.Loader {
     public static void main(java.lang.String[]);
 }

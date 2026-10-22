@@ -2,6 +2,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:sharedUserId="com.termux"
     tools:ignore="Deprecated">
-    <!-- Keeps termux-x11's process from being classified separately from termux's own cpuset. -->
+    <!-- Keeps termux-wayland's process from being classified separately from termux's own cpuset. -->
     <application android:process="com.termux" />
 </manifest>

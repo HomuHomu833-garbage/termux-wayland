@@ -1319,6 +1319,16 @@ static void seat_get_pointer(struct wl_client *client, struct wl_resource *resou
 	}
 	wl_resource_set_implementation(r, &pointer_impl, server, unlink_resource);
 	wl_list_insert(&server->seat.pointers, wl_resource_get_link(r));
+	/* The surface can have the focus already (Xwayland maps its window before it gets its
+	 * pointer): without an enter the client drops every motion and button. */
+	struct twl_surface *focus = server->seat.pointer_focus;
+	int32_t ox, oy;
+	if (focus && same_client(r, focus) && surface_origin(focus, &ox, &oy)) {
+		wl_pointer_send_enter(r, wl_display_next_serial(server->display), focus->resource,
+				wl_fixed_from_double(server->seat.px - ox), wl_fixed_from_double(server->seat.py - oy));
+		if (wl_resource_get_version(r) >= WL_POINTER_FRAME_SINCE_VERSION)
+			wl_pointer_send_frame(r);
+	}
 }
 
 static void seat_get_keyboard(struct wl_client *client, struct wl_resource *resource, uint32_t id) {

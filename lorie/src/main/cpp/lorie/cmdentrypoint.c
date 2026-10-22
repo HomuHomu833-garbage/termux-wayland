@@ -553,6 +553,14 @@ static int wake_readable(int fd, uint32_t mask, void *data) {
 	return 0;
 }
 
+/* The activity reports "Compositor stalled" when it hears nothing for a while. */
+static int heartbeat(void *data) {
+	lorieEvent e = {.type = EVENT_HEARTBEAT};
+	send_event(&e);
+	wl_event_source_timer_update(data ? *(struct wl_event_source **) data : NULL, 1000);
+	return 0;
+}
+
 /* ---- knocks: the activity asks for a broadcast with our binder ---- */
 
 static int knock_readable(int fd, uint32_t mask, void *data) {
@@ -703,6 +711,9 @@ static void *compositor_thread(void *arg) {
 		return NULL;
 	}
 	wl_event_loop_add_fd(g.server.loop, g.wake_fd, WL_EVENT_READABLE, wake_readable, NULL);
+	static struct wl_event_source *heartbeat_timer;
+	heartbeat_timer = wl_event_loop_add_timer(g.server.loop, heartbeat, &heartbeat_timer);
+	wl_event_source_timer_update(heartbeat_timer, 1000);
 	listen_for_knocks();
 	root_alloc(g.width, g.height);
 	update_output();

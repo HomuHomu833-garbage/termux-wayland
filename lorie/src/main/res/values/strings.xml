@@ -7,7 +7,7 @@
     <string name="lorie_app_name">&TERMUX_WAYLAND_APP_NAME;</string>
 
     <string name="not_connected">Not connected</string>
-    <string name="no_server_signal">X server stalled</string>
+    <string name="no_server_signal">Compositor stalled</string>
     <string name="preferences_button_text">Preferences</string>
     <string name="help_button_text">Help</string>
     <string name="exit_button_text">Exit</string>
@@ -80,7 +80,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="lorie_pref_capturedPointerSpeedFactor">Captured pointer speed factor, %</string>
     <string name="lorie_pref_tapToMove">Enable tap-to-move for touchpads</string>
     <string name="lorie_pref_ignoreGamepadEvents">Ignore gamepad input events</string>
-    <string name="lorie_pref_ignoreGamepadEvents_summary">Prevent gamepad and joystick events from being forwarded to X server</string>
+    <string name="lorie_pref_ignoreGamepadEvents_summary">Prevent gamepad and joystick events from being forwarded to Wayland apps</string>
     <string name="lorie_pref_zoomFollowsCursor">Pan to follow cursor while zoomed in</string>
 
     <string name="lorie_pref_showAdditionalKbd">Show additional keyboard</string>
@@ -88,7 +88,7 @@ E.g. <b>META</b> for <i>META key</i>, \n
     <string name="lorie_pref_showIMEWhileExternalConnected">Show IME with external keyboard</string>
     <string name="lorie_pref_showIMEWhileExternalConnected_summary">Show software keyboard while hardware keyboard is connected.</string>
     <string name="lorie_pref_preferScancodes">Prefer scancodes when possible</string>
-    <string name="lorie_pref_preferScancodes_summary">Let X server handle hardware keyboard layout (with DE settings or setxkbmap).</string>
+    <string name="lorie_pref_preferScancodes_summary">Send hardware keyboard scancodes and let the keymap decide the layout (termux-wayland -keymap).</string>
     <string name="lorie_pref_hardwareKbdScancodesWorkaround">Hardware keyboard scancodes workaround</string>
     <string name="lorie_pref_hardwareKbdScancodesWorkaround_summary">Fixes scancodes on some devices. Might cause problems with multiple layouts.</string>
     <string name="lorie_pref_dexMetaKeyCapture">Intercept system shortcuts</string>

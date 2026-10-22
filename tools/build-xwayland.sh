@@ -81,6 +81,12 @@ xwl_fixed_refresh(struct xwl_output *fixed)\
 }' "$O"
 	[ "$(grep -c "xwl_fixed_refresh(xwl_output)" "$O")" = 2 ] || { echo "mode refresh patch failed"; exit 1; }
 }
+# Only the window's size as mode: the fake ones (640x480...) resize the X screen away from the
+# window, which Termux:Wayland does not follow.
+grep -q "only the window's size" "$O" || {
+	sed -i '/^xwl_randr_add_modes_fixed(/,/^}/ s|^    /\* Add fake modes \*/$|    /* Add fake modes: none, only the window'"'"'s size (Termux:Wayland) */|; /^xwl_randr_add_modes_fixed(/,/^}/ s|i < ARRAY_SIZE(xwl_output_fake_modes); i++|i < 0; i++|' "$O"
+	grep -q "only the window's size" "$O" || { echo "fake modes patch failed"; exit 1; }
+}
 
 # gbm.pc and dri.pc from GBM_PREFIX, the rest from Termux.
 GBM_PREFIX=${GBM_PREFIX:-$PREFIX}

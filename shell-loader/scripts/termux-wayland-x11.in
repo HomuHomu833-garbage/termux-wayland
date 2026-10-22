@@ -20,7 +20,15 @@ if [ "$1" = "--inner" ]; then
   # X screen to it, so the X desktop is Termux:Wayland's screen size divided by its output
   # scale, and follows rotation. (-fullscreen keeps Xwayland's own size and stretches it.)
   # -hidpi (Xwayland 24.1+) makes it the full resolution instead.
-  Xwayland "$display" "${xwayland_args[@]}" &
+  # An Xwayland with glamor on a GPU driver (termux-xclipse940-linux: termux-mesa/build-xwayland.sh
+  # and termux-gpu), when installed: X11 programs then get DRI3 and the GPU. Termux's xwayland
+  # package has no glamor, so its X11 programs only have software rendering.
+  xwayland_cmd=(Xwayland)
+  glamor=${PREFIX:-/data/data/com.termux/files/usr}/opt/xwayland-glamor/bin/Xwayland
+  if [ -z "$TERMUX_WAYLAND_NO_GLAMOR" ] && [ -x "$glamor" ] && command -v termux-gpu >/dev/null; then
+    xwayland_cmd=(termux-gpu "$glamor")
+  fi
+  "${xwayland_cmd[@]}" "$display" "${xwayland_args[@]}" &
   xwayland=$!
   for _ in $(seq 1 100); do
     [ -S "${TMPDIR:-/tmp}/.X11-unix/X${display#:}" ] && break

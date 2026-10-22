@@ -70,6 +70,10 @@ static bool toplevel_floating(struct twl_toplevel *t) {
 		return false;
 	if (t->parent)
 		return true;
+	/* Rootful Xwayland reports its current screen size as both min and max size, but resizes its
+	 * X screen to whatever size it is configured with: maximize it like any other window. */
+	if (t->app_id && strcmp(t->app_id, "org.freedesktop.Xwayland") == 0)
+		return false;
 	return t->min_w > 0 && t->min_w == t->max_w && t->min_h > 0 && t->min_h == t->max_h;
 }
 
@@ -607,6 +611,7 @@ static void toplevel_set_app_id(struct wl_client *client, struct wl_resource *re
 		return;
 	free(t->app_id);
 	t->app_id = strdup(app_id);
+	schedule_configure(t->xdg); /* the app ID can change whether it floats */
 }
 
 static void toplevel_show_window_menu(struct wl_client *client, struct wl_resource *resource,

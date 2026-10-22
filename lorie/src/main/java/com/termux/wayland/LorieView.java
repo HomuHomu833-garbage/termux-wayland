@@ -298,6 +298,7 @@ public class LorieView extends SurfaceView implements InputStub {
         @Override public void surfaceCreated(@NonNull SurfaceHolder holder) {}
 
         @Override public void surfaceChanged(@NonNull SurfaceHolder holder, int f, int width, int height) {
+            requestHighestRefreshRate(holder.getSurface());
             LorieView.this.surfaceChanged(mNativeContext, holder.getSurface());
             width = getMeasuredWidth();
             height = getMeasuredHeight();
@@ -414,6 +415,12 @@ public class LorieView extends SurfaceView implements InputStub {
     }
 
     private Matrix getInputTransform() {
+        if (inputViewport.width() <= 0 || inputViewport.height() <= 0 || !(inputSourceWidth > 0.f) || !(inputSourceHeight > 0.f)) {
+            inputViewport.set(viewport);
+            inputSourceLeft = inputSourceTop = 0.f;
+            inputSourceWidth = p.x;
+            inputSourceHeight = p.y;
+        }
         inputTransform.reset();
         inputTransform.postTranslate(-inputViewport.left, -inputViewport.top);
         inputTransform.postScale(inputSourceWidth / (float) inputViewport.width(), inputSourceHeight / (float) inputViewport.height());
@@ -426,9 +433,46 @@ public class LorieView extends SurfaceView implements InputStub {
             mCallback.inputTransformChanged(p.x, p.y, getInputTransform());
     }
 
+    /** The display mode with the highest refresh rate at the current resolution, or null. */
+    private Display.Mode highestRefreshMode() {
+        Display display = getDisplay();
+        if (display == null)
+            return null;
+        Display.Mode current = display.getMode(), best = current;
+        for (Display.Mode m : display.getSupportedModes())
+            if (m.getPhysicalWidth() == current.getPhysicalWidth() && m.getPhysicalHeight() == current.getPhysicalHeight()
+                    && m.getRefreshRate() > best.getRefreshRate())
+                best = m;
+        return best;
+    }
+
+    private float highestRefreshRate() {
+        Display.Mode mode = highestRefreshMode();
+        return mode != null ? mode.getRefreshRate() : 60;
+    }
+
+    /**
+     * Android runs an app at 60 Hz (and adaptive displays lower) unless it asks for more: ask for the
+     * display's highest refresh rate, for the window and for the surface the compositor's frames go to.
+     */
+    private void requestHighestRefreshRate(Surface surface) {
+        Display.Mode mode = highestRefreshMode();
+        if (mode == null)
+            return;
+        if (activity != null) {
+            android.view.WindowManager.LayoutParams attrs = activity.getWindow().getAttributes();
+            if (attrs.preferredDisplayModeId != mode.getModeId()) {
+                attrs.preferredDisplayModeId = mode.getModeId();
+                activity.getWindow().setAttributes(attrs);
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && surface != null && surface.isValid())
+            surface.setFrameRate(mode.getRefreshRate(), Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
+    }
+
     private void sendWindowChange() {
         String name;
-        int framerate = (int) (getDisplay() != null ? getDisplay().getRefreshRate() : 30);
+        int framerate = Math.round(highestRefreshRate());
 
         if (getDisplay() == null || getDisplay().getDisplayId() == Display.DEFAULT_DISPLAY)
             name = "builtin";
@@ -466,6 +510,10 @@ public class LorieView extends SurfaceView implements InputStub {
     @SuppressWarnings("unused")
     private void setRendererViewport(int viewportLeft, int viewportTop, int viewportWidth, int viewportHeight,
                                             float sourceLeft, float sourceTop, float sourceWidth, float sourceHeight) {
+        // The renderer reports an empty source while the surface is being recreated (expected size
+        // reset to 0): keep the previous mapping, a zero one would send every touch to (0,0).
+        if (viewportWidth <= 0 || viewportHeight <= 0 || !(sourceWidth > 0.f) || !(sourceHeight > 0.f))
+            return;
         MainActivity.handler.post(() -> {
             inputViewport.set(viewportLeft, viewportTop, viewportLeft + viewportWidth, viewportTop + viewportHeight);
             inputSourceLeft = sourceLeft;

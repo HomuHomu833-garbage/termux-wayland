@@ -15,6 +15,8 @@ S=$HOME/src/xwayland-$VER
 O=$PREFIX/opt/xwayland-glamor
 RAW=https://raw.githubusercontent.com/termux/termux-packages/master/x11-packages/xwayland
 
+# The X11 libraries are in Termux's x11-repo (off on a fresh install).
+[ -f "$PREFIX/etc/apt/sources.list.d/x11.list" ] || { pkg install -y x11-repo >/dev/null && pkg update -y >/dev/null; }
 pkg install -y libandroid-shmem libdrm libepoxy libpciaccess libpixman libwayland libwayland-protocols \
 	libx11 libxau libxcvt libxfont2 libxinerama libxkbfile libxshmfence openssl xkeyboard-config \
 	xorg-protocol-txt xorg-xkbcomp xorgproto xtrans libtirpc ninja pkg-config \

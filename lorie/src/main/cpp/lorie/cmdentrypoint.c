@@ -109,8 +109,7 @@ static struct {
 	.renderer_cond_placeholder = PTHREAD_COND_INITIALIZER,
 };
 
-bool lorieConnectionAlive(void) {
-	int fd = g.conn_fd;
+bool lorieConnectionAlive(int fd) {
 	if (fd == -1)
 		return false;
 	struct pollfd p = {.fd = fd, .events = POLLIN | POLLHUP | POLLERR | POLLRDHUP};
@@ -234,7 +233,7 @@ static void end_frame(void *data) {
 	/* The activity samples this buffer from another process: it must be complete first. */
 	glFinish();
 	g.front = !g.front;
-	lorie_mutex_lock(&g.state->lock, &g.state->lockingPid);
+	lorie_mutex_lock(&g.state->lock, &g.state->lockingPid, g.conn_fd);
 	g.state->rootWindowTextureID = LorieBuffer_description(g.root[g.front].buffer)->id;
 	g.state->drawRequested = 1;
 	lorie_mutex_unlock(&g.state->lock, &g.state->lockingPid);
@@ -255,7 +254,7 @@ static void send_to_frontend(void *data, const struct twl_event *e) {
 
 static void set_cursor(void *data, const uint8_t *rgba, int32_t w, int32_t h, int32_t hx, int32_t hy) {
 	struct lorie_shared_server_state *s = g.state;
-	lorie_mutex_lock(&s->cursor.lock, &s->cursor.lockingPid);
+	lorie_mutex_lock(&s->cursor.lock, &s->cursor.lockingPid, g.conn_fd);
 	if (w > 0 && h > 0 && w < 512 && h < 512) {
 		memcpy(s->cursor.bits, rgba, (size_t) w * h * 4);
 		s->cursor.width = (uint32_t) w;

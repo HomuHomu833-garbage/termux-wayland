@@ -151,7 +151,8 @@ static void show_waiting(struct twl_surface *s) {
 		s->shown = b; /* keeps our reference; released when replaced */
 	} else {
 		struct upload_ctx c = {s, b, &s->waiting_damage};
-		if (!twl_dmabuf_read(b, upload_dmabuf_pixels, &c))
+		if (!twl_texture_copy_dmabuf(server->renderer, &s->texture, b, &s->waiting_damage) &&
+				!twl_dmabuf_read(b, upload_dmabuf_pixels, &c))
 			twl_error("dma-buf %dx%d: could not read it", b->attribs.width, b->attribs.height);
 		drop_shown(s);
 		twl_buffer_send_release(b->resource);

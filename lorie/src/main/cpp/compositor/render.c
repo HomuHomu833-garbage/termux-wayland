@@ -38,6 +38,7 @@ struct twl_renderer {
 	bool dmabuf_import;
 	bool dmabuf_modifiers;
 	bool use_ahb;
+	bool vkcopy; /* dma-bufs EGL can't import: tried on the GPU first (vkcopy.c) */
 	EGLSyncKHR frame_sync;
 	int32_t width, height; /* current frame, pixels */
 
@@ -169,6 +170,7 @@ struct twl_renderer *twl_renderer_create(struct twl_server *server, EGLDisplay d
 #ifdef __ANDROID__
 	r->use_ahb = server->config.ahb && images && eglGetNativeClientBufferANDROID &&
 			has_extension(egl_ext, "EGL_ANDROID_image_native_buffer");
+	r->vkcopy = r->use_ahb;
 #endif
 	twl_info("dma-buf import: %s, AHardwareBuffer textures: %s, unpack row length: %s",
 			r->dmabuf_import ? "yes" : "no (copies)", r->use_ahb ? "yes" : "no", r->row_length ? "yes" : "no");
@@ -210,6 +212,7 @@ void twl_texture_release(struct twl_renderer *r, struct twl_texture *t) {
 		glDeleteTextures(1, &t->tex);
 #ifdef __ANDROID__
 	for (int i = 0; i < 2; i++) {
+		twl_vkcopy_free(t->vk_mem[i]);
 		if (t->ahb_tex[i])
 			glDeleteTextures(1, &t->ahb_tex[i]);
 		if (t->image[i])
@@ -278,6 +281,54 @@ static bool ahb_write(struct twl_renderer *r, struct twl_texture *t, const void 
 	return true;
 }
 #endif
+
+bool twl_texture_copy_dmabuf(struct twl_renderer *r, struct twl_texture *t, struct twl_buffer *b,
+		const struct twl_box *damage) {
+#ifdef __ANDROID__
+	const struct twl_dmabuf_attribs *a = &b->attribs;
+	if (!r->use_ahb || !r->vkcopy)
+		return false;
+	struct twl_box whole = {0, 0, a->width, a->height}, box;
+	bool full = !t->valid || !t->ahb[0] || t->width != a->width || t->height != a->height;
+	if (full)
+		box = whole;
+	else if (!twl_box_intersect(&box, damage, &whole))
+		return true;
+	if (full) {
+		twl_texture_release(r, t);
+		if (!ahb_create(r, t, a->width, a->height)) {
+			twl_texture_release(r, t);
+			return false;
+		}
+		t->width = a->width;
+		t->height = a->height;
+		t->target = GL_TEXTURE_2D;
+		t->prev_damage = whole; /* the other copy is empty */
+	}
+	t->swizzle = a->format == DRM_FORMAT_ARGB8888 || a->format == DRM_FORMAT_XRGB8888;
+	t->opaque = a->format == DRM_FORMAT_XRGB8888 || a->format == DRM_FORMAT_XBGR8888;
+	/* As ahb_write: the copy we write missed the previous upload too. */
+	struct twl_box write = box;
+	twl_box_union(&write, &t->prev_damage);
+	wait_last_frame(r);
+	int back = !t->front;
+	if (!twl_vkcopy(b, t->ahb[back], &t->vk_mem[back], &write)) {
+		if (full) {
+			/* Not even a first copy: this renderer's GPU copies don't work. */
+			twl_texture_release(r, t);
+			r->vkcopy = false;
+		}
+		return false;
+	}
+	t->front = back;
+	t->prev_damage = box;
+	t->tex = 0;
+	t->valid = true;
+	return true;
+#else
+	return false;
+#endif
+}
 
 void twl_texture_upload(struct twl_renderer *r, struct twl_texture *t, const void *data, int32_t stride,
 		int32_t width, int32_t height, uint32_t format, const struct twl_box *damage) {

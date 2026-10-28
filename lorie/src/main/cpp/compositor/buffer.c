@@ -44,6 +44,7 @@ void twl_buffer_unref(struct twl_buffer *b) {
 	if (!b || --b->refs > 0)
 		return;
 	twl_renderer_forget_buffer(b->server->renderer, b);
+	twl_vkcopy_free(b->vk);
 	if (b->map)
 		munmap(b->map, b->map_size);
 	for (int i = 0; i < b->attribs.n_planes; i++)

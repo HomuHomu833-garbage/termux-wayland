@@ -76,6 +76,7 @@ struct twl_texture {
 	GLuint ahb_tex[2];
 	int front;
 	struct twl_box prev_damage; /* damage written to the front copy only */
+	void *vk_mem[2];    /* the AHardwareBuffers imported for GPU copies (vkcopy.c) */
 };
 
 struct twl_renderer;
@@ -86,6 +87,9 @@ void twl_renderer_destroy(struct twl_renderer *r);
 void twl_texture_upload(struct twl_renderer *r, struct twl_texture *t, const void *data, int32_t stride,
 		int32_t width, int32_t height, uint32_t drm_format, const struct twl_box *damage);
 void twl_texture_release(struct twl_renderer *r, struct twl_texture *t);
+/* A dma-buf EGL can't import, copied into t by the GPU; false: read it through the CPU. */
+bool twl_texture_copy_dmabuf(struct twl_renderer *r, struct twl_texture *t, struct twl_buffer *b,
+		const struct twl_box *damage);
 bool twl_renderer_dmabuf_import_supported(struct twl_renderer *r);
 /* Zero-copy import of a dma-buf (cached on the buffer); false: copy it instead. */
 bool twl_renderer_import_dmabuf(struct twl_renderer *r, struct twl_buffer *b);
@@ -119,6 +123,9 @@ struct twl_buffer {
 	/* CPU mapping (copy path), kept while the buffer lives */
 	void *map;
 	size_t map_size;
+	/* Vulkan import (GPU copy path, vkcopy.c) */
+	void *vk;
+	bool vk_failed;
 };
 
 void twl_buffer_global_init(struct twl_server *server);
@@ -129,6 +136,13 @@ void twl_buffer_send_release(struct wl_resource *buffer_resource);
 /* Waits for the dma-buf's write fences (implicit sync); true when idle. */
 bool twl_dmabuf_idle(struct twl_buffer *b);
 bool twl_dmabuf_read(struct twl_buffer *b, void (*fn)(void *data, const void *pixels, int32_t stride), void *data);
+
+/* ---- GPU dma-buf copies (vkcopy.c) ---- */
+
+/* Copies box of b's pixels into the AHardwareBuffer ahb (same stride rules as the CPU copy);
+ * *ahb_mem caches ahb's import. False: not possible, copy through the CPU. */
+bool twl_vkcopy(struct twl_buffer *b, void *ahb, void **ahb_mem, const struct twl_box *box);
+void twl_vkcopy_free(void *mem);
 
 /* ---- surfaces (surface.c) ---- */
 

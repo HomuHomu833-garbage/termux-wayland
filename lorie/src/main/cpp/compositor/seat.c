@@ -745,11 +745,30 @@ static int touch_slot(struct twl_seat *seat, int32_t id, bool create) {
 	return -1;
 }
 
+/* Whether the surface's client listens to touch at all (nested compositors such as Hyprland
+ * bind only pointer and keyboard). */
+static bool client_has_touch(struct twl_seat *seat, struct twl_surface *s) {
+	struct wl_resource *r;
+	wl_resource_for_each(r, &seat->touches)
+		if (same_client(r, s))
+			return true;
+	return false;
+}
+
 void twl_seat_touch(struct twl_server *server, uint32_t type, int32_t id, double x, double y, uint32_t time) {
 	struct twl_seat *seat = seat_of(server);
 	struct wl_resource *r;
 
-	if (server->config.touch_pointer) {
+	bool emulate = server->config.touch_pointer || id == seat->emulating_touch;
+	if (!emulate && type == TWL_EV_TOUCH_DOWN && seat->emulating_touch < 0 && touch_slot(seat, id, false) < 0) {
+		bool first = true;
+		for (int i = 0; i < TWL_MAX_TOUCH; i++)
+			first &= !seat->touch[i].active;
+		double lx, ly;
+		struct twl_surface *hit = first ? surface_at(server, x, y, &lx, &ly) : NULL;
+		emulate = hit && !client_has_touch(seat, hit);
+	}
+	if (emulate) {
 		/* The first finger is a mouse with its left button held. */
 		if (type == TWL_EV_TOUCH_DOWN && seat->emulating_touch < 0) {
 			seat->emulating_touch = id;

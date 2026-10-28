@@ -60,10 +60,10 @@ xwl_present_copy_timer_len(struct xwl_window *xwl_window)\
 	grep -q "timeout = xwl_present_copy_timer_len" "$P" || { echo "present timer patch failed"; exit 1; }
 }
 # Same for the modes of the rootful screen, which RandR reports at a fixed 60 Hz.
-O=$S/hw/xwayland/xwayland-output.c
-grep -q xwl_fixed_refresh "$O" || {
-	sed -i 's/^                            60, 0, 0);$/                            xwl_fixed_refresh(xwl_output), 0, 0);/' "$O"
-	sed -i 's/xwayland_cvt(current_width, current_height, 60, 0, 0)/xwayland_cvt(current_width, current_height, xwl_fixed_refresh(xwl_output), 0, 0)/' "$O"
+OUT=$S/hw/xwayland/xwayland-output.c
+grep -q xwl_fixed_refresh "$OUT" || {
+	sed -i 's/^                            60, 0, 0);$/                            xwl_fixed_refresh(xwl_output), 0, 0);/' "$OUT"
+	sed -i 's/xwayland_cvt(current_width, current_height, 60, 0, 0)/xwayland_cvt(current_width, current_height, xwl_fixed_refresh(xwl_output), 0, 0)/' "$OUT"
 	sed -i '/^Bool$/{N;/\nxwl_randr_add_modes_fixed(/i\
 static double\
 xwl_fixed_refresh(struct xwl_output *fixed)\
@@ -78,14 +78,14 @@ xwl_fixed_refresh(struct xwl_output *fixed)\
     return refresh > 0 ? refresh / 1000.0 : 60;\
 }\
 
-}' "$O"
-	[ "$(grep -c "xwl_fixed_refresh(xwl_output)" "$O")" = 2 ] || { echo "mode refresh patch failed"; exit 1; }
+}' "$OUT"
+	[ "$(grep -c "xwl_fixed_refresh(xwl_output)" "$OUT")" = 2 ] || { echo "mode refresh patch failed"; exit 1; }
 }
 # Only the window's size as mode: the fake ones (640x480...) resize the X screen away from the
 # window, which Termux:Wayland does not follow.
-grep -q "only the window's size" "$O" || {
-	sed -i '/^xwl_randr_add_modes_fixed(/,/^}/ s|^    /\* Add fake modes \*/$|    /* Add fake modes: none, only the window'"'"'s size (Termux:Wayland) */|; /^xwl_randr_add_modes_fixed(/,/^}/ s|i < ARRAY_SIZE(xwl_output_fake_modes); i++|i < 0; i++|' "$O"
-	grep -q "only the window's size" "$O" || { echo "fake modes patch failed"; exit 1; }
+grep -q "only the window's size" "$OUT" || {
+	sed -i '/^xwl_randr_add_modes_fixed(/,/^}/ s|^    /\* Add fake modes \*/$|    /* Add fake modes: none, only the window'"'"'s size (Termux:Wayland) */|; /^xwl_randr_add_modes_fixed(/,/^}/ s|i < ARRAY_SIZE(xwl_output_fake_modes); i++|i < 0; i++|' "$OUT"
+	grep -q "only the window's size" "$OUT" || { echo "fake modes patch failed"; exit 1; }
 }
 
 # gbm.pc and dri.pc from GBM_PREFIX, the rest from Termux.

@@ -17,7 +17,8 @@ RAW=https://raw.githubusercontent.com/termux/termux-packages/master/x11-packages
 
 pkg install -y libandroid-shmem libdrm libepoxy libpciaccess libpixman libwayland libwayland-protocols \
 	libx11 libxau libxcvt libxfont2 libxinerama libxkbfile libxshmfence openssl xkeyboard-config \
-	xorg-protocol-txt xorg-xkbcomp xorgproto xtrans libtirpc ninja pkg-config >/dev/null
+	xorg-protocol-txt xorg-xkbcomp xorgproto xtrans libtirpc ninja pkg-config \
+	mesa clang make binutils python curl xz-utils >/dev/null
 command -v meson >/dev/null || pip install -q meson
 
 if [ ! -d "$S" ]; then

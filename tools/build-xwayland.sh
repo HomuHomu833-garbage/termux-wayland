@@ -88,6 +88,16 @@ grep -q "only the window's size" "$OUT" || {
 	grep -q "only the window's size" "$OUT" || { echo "fake modes patch failed"; exit 1; }
 }
 
+# miSyncTriggerFence rescans a fence's triggers until none fires, and Present's trigger fires
+# while it has a callback, which it never cleared: a present waiting on a fence (RadeonSI
+# clients) re-ran forever and the X server hung at 100% CPU. Clear it before running it; the
+# present re-arms it if the fence is still not ready.
+PF=$S/present/present_fence.c
+grep -q "callback = NULL; /\* one-shot \*/" "$PF" || {
+	sed -i '/^present_fence_sync_trigger_fired(/,/^}/ s|^    if (present_fence->callback)$|    void (*callback)(void *param) = present_fence->callback;\n\n    present_fence->callback = NULL; /* one-shot */\n    if (callback)|; /^present_fence_sync_trigger_fired(/,/^}/ s|^        (\*present_fence->callback)(present_fence->param);$|        callback(present_fence->param);|' "$PF"
+	grep -q "        callback(present_fence->param);" "$PF" || { echo "present fence patch failed"; exit 1; }
+}
+
 # libxshmfence with futexes (static), like glibc distributions build it: Termux's uses process-shared
 # pthread mutexes, a different layout in the same shared memory, so the first DRI3 present from
 # a proot/chroot program (glibc libxshmfence) left Xwayland waiting in xshmfence_trigger forever.

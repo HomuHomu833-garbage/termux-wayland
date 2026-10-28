@@ -1459,7 +1459,7 @@ void twl_seat_init(struct twl_server *server) {
 		pwrite(seat->keymap_fd, keymap, seat->keymap_size, 0);
 	free(loaded);
 
-	wl_global_create(server->display, &wl_seat_interface, 8, server, seat_bind);
+	wl_global_create(server->display, &wl_seat_interface, 9, server, seat_bind);
 	wl_global_create(server->display, &wl_data_device_manager_interface, 3, server, manager_bind);
 	wl_global_create(server->display, &zwp_text_input_manager_v3_interface, 1, server, ti_manager_bind);
 	wl_global_create(server->display, &zwp_relative_pointer_manager_v1_interface, 1, server, relative_manager_bind);

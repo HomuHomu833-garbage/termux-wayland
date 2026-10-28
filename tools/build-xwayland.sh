@@ -88,9 +88,28 @@ grep -q "only the window's size" "$OUT" || {
 	grep -q "only the window's size" "$OUT" || { echo "fake modes patch failed"; exit 1; }
 }
 
-# gbm.pc and dri.pc from GBM_PREFIX, the rest from Termux.
+# libxshmfence with futexes (static), like glibc distributions build it: Termux's uses process-shared
+# pthread mutexes, a different layout in the same shared memory, so the first DRI3 present from
+# a proot/chroot program (glibc libxshmfence) left Xwayland waiting in xshmfence_trigger forever.
+XSF=1.3.3
+XSF_SHA=d4a4df096aba96fea02c029ee3a44e11a47eb7f7213c1a729be83e85ec3fde10
+if [ ! -f "$O/lib/libxshmfence.a" ]; then
+	XS=$HOME/src/libxshmfence-$XSF
+	if [ ! -d "$XS" ]; then
+		curl -sSLf -o "$XS.tar.xz" "https://xorg.freedesktop.org/releases/individual/lib/libxshmfence-$XSF.tar.xz"
+		echo "$XSF_SHA  $XS.tar.xz" | sha256sum -c - >/dev/null
+		tar -xf "$XS.tar.xz" -C "$HOME/src" && rm "$XS.tar.xz"
+	fi
+	# glibc's values.h, only for MAXINT
+	sed -i 's/^#include <values.h>$/#include <limits.h>\n#define MAXINT INT_MAX/' "$XS/src/xshmfence_futex.h"
+	(cd "$XS" && CFLAGS="-O2 -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__" ./configure -q --prefix="$O" --enable-futex --disable-shared --with-pic && make -s install) >/dev/null
+	nm "$O/lib/libxshmfence.a" | grep -q pthread_mutex_lock && { echo "libxshmfence: no futexes"; exit 1; }
+	rm -rf "$S/build"
+fi
+
+# gbm.pc and dri.pc from GBM_PREFIX, xshmfence.pc from $O, the rest from Termux.
 GBM_PREFIX=${GBM_PREFIX:-$PREFIX}
-export PKG_CONFIG_PATH=$GBM_PREFIX/lib/pkgconfig:$PREFIX/lib/pkgconfig
+export PKG_CONFIG_PATH=$O/lib/pkgconfig:$GBM_PREFIX/lib/pkgconfig:$PREFIX/lib/pkgconfig
 pkg-config --exists gbm || { echo "No gbm.pc: build a Mesa with GBM, or set GBM_PREFIX"; exit 1; }
 FLAGS="-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -fcommon -fPIC -DFNDELAY=O_NDELAY -Wno-int-to-pointer-cast -Wno-implicit-function-declaration -I$PREFIX/include/libdrm"
 [ -f "$S/build/build.ninja" ] || rm -rf "$S/build"

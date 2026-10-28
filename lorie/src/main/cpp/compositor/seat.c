@@ -323,6 +323,27 @@ void twl_xdg_begin_move(struct twl_toplevel *t) {
 	seat->move_dy = seat->py - t->y;
 }
 
+/* Cursor images come in buffer pixels and the frontend draws them in output pixels: scale them by
+ * the output scale over the buffer's, or a scale 1 cursor (Xwayland's) is half size at scale 2. */
+static void send_cursor(struct twl_server *server, struct twl_surface *s, int32_t hx, int32_t hy) {
+	int32_t bs = s->scale > 0 ? s->scale : 1;
+	int32_t k = server->scale > bs ? server->scale / bs : 1;
+	int32_t w = s->cursor_w, h = s->cursor_h;
+	uint8_t *scaled = k > 1 ? malloc((size_t) w * k * h * k * 4) : NULL;
+	if (!scaled) {
+		server->backend.set_cursor(server->backend.data, s->cursor_rgba, w, h, hx * bs, hy * bs);
+		return;
+	}
+	for (int32_t y = 0; y < h * k; y++) {
+		const uint32_t *src = (const uint32_t *) s->cursor_rgba + (size_t) (y / k) * w;
+		uint32_t *dst = (uint32_t *) scaled + (size_t) y * w * k;
+		for (int32_t x = 0; x < w * k; x++)
+			dst[x] = src[x / k];
+	}
+	server->backend.set_cursor(server->backend.data, scaled, w * k, h * k, hx * bs * k, hy * bs * k);
+	free(scaled);
+}
+
 static void pointer_set_cursor(struct wl_client *client, struct wl_resource *resource, uint32_t serial,
 		struct wl_resource *surface_resource, int32_t hx, int32_t hy) {
 	struct twl_server *server = wl_resource_get_user_data(resource);
@@ -336,8 +357,7 @@ static void pointer_set_cursor(struct wl_client *client, struct wl_resource *res
 	seat->cursor_hx = hx;
 	seat->cursor_hy = hy;
 	if (s && s->cursor_rgba && server->backend.set_cursor)
-		server->backend.set_cursor(server->backend.data, s->cursor_rgba, s->cursor_w, s->cursor_h,
-				hx * (s->scale > 0 ? s->scale : 1), hy * (s->scale > 0 ? s->scale : 1));
+		send_cursor(server, s, hx, hy);
 	twl_seat_cursor_changed(server);
 	twl_server_schedule_repaint(server);
 }
@@ -395,8 +415,7 @@ void twl_seat_cursor_committed(struct twl_server *server, struct twl_surface *s,
 	}
 	if (s != seat->cursor)
 		return;
-	int32_t bs = s->scale > 0 ? s->scale : 1;
-	server->backend.set_cursor(server->backend.data, rgba, width, height, seat->cursor_hx * bs, seat->cursor_hy * bs);
+	send_cursor(server, s, seat->cursor_hx, seat->cursor_hy);
 	twl_seat_cursor_changed(server);
 }
 

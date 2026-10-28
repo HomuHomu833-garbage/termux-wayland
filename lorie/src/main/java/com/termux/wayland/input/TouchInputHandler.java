@@ -840,10 +840,10 @@ public class TouchInputHandler {
                 moveCursorToScreenPoint(x, y);
             }
 
-            if (button != InputStub.BUTTON_LEFT || !(mInjector.tapToMove && mInputStrategy instanceof InputStrategyInterface.TrackpadInputStrategy))
-                mInputStrategy.onTap(button);
-            else
-                mGestureListenerHandler.sendEmptyMessageDelayed(InputStub.BUTTON_LEFT, ViewConfiguration.getDoubleTapTimeout());
+            // Click at once, also with tap-to-move: a second tap held down still drags
+            // (onDoubleTapEvent), and a quick second tap is a double click. Waiting out the
+            // double-tap timeout first made every trackpad click ~300 ms late.
+            mInputStrategy.onTap(button);
         }
 
         private float mLastFocusX;

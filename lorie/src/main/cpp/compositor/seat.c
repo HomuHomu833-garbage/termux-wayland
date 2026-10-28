@@ -773,6 +773,9 @@ void twl_seat_touch(struct twl_server *server, uint32_t type, int32_t id, double
 		if (type == TWL_EV_TOUCH_DOWN && seat->emulating_touch < 0) {
 			seat->emulating_touch = id;
 			seat->cursor_visible = false;
+			/* Arrive with a real move: menus and launchers (fuzzel, GTK menus) pick what's under
+			 * the pointer on motion, not on enter, and would act on the old selection. */
+			twl_seat_pointer_motion(server, x, y > 1 ? y - 1 : y + 1, time);
 			twl_seat_pointer_motion(server, x, y, time);
 			twl_seat_pointer_button(server, BTN_LEFT, true, time);
 		} else if (id == seat->emulating_touch) {

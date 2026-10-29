@@ -115,8 +115,9 @@ if [ ! -f "$O/lib/libxshmfence.a" ]; then
 	fi
 	# glibc's values.h, only for MAXINT
 	sed -i 's/^#include <values.h>$/#include <limits.h>\n#define MAXINT INT_MAX/' "$XS/src/xshmfence_futex.h"
-	# sh: no /bin/sh where termux-exec is not loaded (the CI's Docker image)
-	(cd "$XS" && CFLAGS="-O2 -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__" CONFIG_SHELL=$PREFIX/bin/sh sh ./configure -q --prefix="$O" --enable-futex --disable-shared --with-pic && make -s install) >/dev/null
+	# sh: no /bin/sh where termux-exec is not loaded (the CI's Docker image); memfd_create: libc has it
+	# (configure's link test can miss it, and libxshmfence's own static one then clashes)
+	(cd "$XS" && CFLAGS="-O2 -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__" CONFIG_SHELL=$PREFIX/bin/sh ac_cv_func_memfd_create=yes sh ./configure -q --prefix="$O" --enable-futex --disable-shared --with-pic && make -s install) >/dev/null
 	nm "$O/lib/libxshmfence.a" | grep -q pthread_mutex_lock && { echo "libxshmfence: no futexes"; exit 1; }
 	rm -rf "$S/build"
 fi

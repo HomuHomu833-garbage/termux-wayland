@@ -34,12 +34,13 @@ jobs:
     - name: Build and package
       run: |
         mkdir -m 777 out
-        docker run --rm --privileged -e GITHUB_SHA -v "$PWD/tools:/tools:ro" -v "$PWD/out:/out" \
-          termux/termux-docker:aarch64 bash -c '
+        # The container's login drops the environment: the version goes in the command.
+        docker run --rm --privileged -v "$PWD/tools:/tools:ro" -v "$PWD/out:/out" \
+          termux/termux-docker:aarch64 bash -c "
             set -e
             yes | pkg upgrade -y >/dev/null
             bash /tools/build-xwayland.sh
-            bash /tools/package-xwayland.sh /out "$(date +%Y%m%d).${GITHUB_SHA::7}"'
+            bash /tools/package-xwayland.sh /out $(date +%Y%m%d).${GITHUB_SHA::7}"
         ls -l out
 
     - name: Store Xwayland package

@@ -56,7 +56,8 @@ if [ "$1" = "--inner" ]; then
   exit $status
 fi
 
-if ! command -v Xwayland >/dev/null; then
+if [ -z "$TERMUX_WAYLAND_XWAYLAND" ] && ! [ -x "${PREFIX:-/data/data/com.termux/files/usr}/opt/xwayland-glamor/bin/Xwayland" ] &&
+  ! command -v Xwayland >/dev/null; then
   echo "Xwayland is not installed: pkg i x11-repo && pkg i xwayland"
   exit 1
 fi

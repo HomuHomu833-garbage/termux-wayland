@@ -135,5 +135,5 @@ FLAGS="-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -fcommon -fPIC -DFNDELAY=O_NDE
 	-Dglamor=true -Dxvfb=false -Dlibunwind=false -Dipv6=true -Dsha1=libcrypto \
 	-Ddefault_font_path="$PREFIX/share/fonts" -Dxkb_dir="$PREFIX/share/X11/xkb" \
 	-Dxkb_bin_dir="$PREFIX/bin" -Dxkb_output_dir="$PREFIX/var/lib/xkb"
-ninja -C "$S/build" install >/dev/null
+ninja -C "$S/build" install >"$S/build/ninja.log" 2>&1 || { tail -40 "$S/build/ninja.log"; exit 1; }
 "$O/bin/Xwayland" -help 2>&1 | grep -i glamor | head -3

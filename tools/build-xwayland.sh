@@ -40,6 +40,11 @@ fi
 grep -q xwl_memfd_create "$S/hw/xwayland/xwayland-shm.c" ||
 	sed -i 's/^static inline int memfd_create(/#define memfd_create xwl_memfd_create\n&/' "$S/hw/xwayland/xwayland-shm.c"
 
+# Newer NDK headers have reallocarray as an inline function below API 29, which meson's link test
+# misses: X then defines its own under the same name, and they clash. Take the inline one.
+grep -q "true or cc.has_function('reallocarray'" "$S/include/meson.build" ||
+	sed -i "s/cc.has_function('reallocarray'/true or &/" "$S/include/meson.build"
+
 # Present paces copied frames (always, for a rootful Xwayland) with a fixed 17 ms timer, capping
 # vsynced X11 programs and compositing window managers at ~60 fps: follow the output's refresh.
 P=$S/hw/xwayland/xwayland-present.c
